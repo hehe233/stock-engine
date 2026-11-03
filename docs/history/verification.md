@@ -2,6 +2,19 @@
 
 [返回历史索引](README.md)
 
+## 重构 P3 收尾：首屏依赖核验与构建诊断（2026-11-03）
+
+- 起点为已提交的 `9a7cb22`，工作区干净。本批重新构建基线，保存在 `.runtime/p3-closeout-before/`，包含 dist、依赖报告和涉及导入实验的原始源码。未修改后端、依赖、锁文件或持久数据目录，未暂存或提交。
+- 新增 `apps/web/build/bundle-report.ts`，在 `scripts/build-web.ps1 -Analyze` 时启用。报告的 `entrypoints` 沿静态导入递归去重汇总，动态路由单独列出；`chunks` 包含最终字节/gzip、导入关系及按压缩前 `renderedLength` 排序的模块。报告仅写 `.runtime/web-bundle-report.json`。最初在 generateBundle 计量发现少算 Vite 后续补入的预加载代码，已改为 writeBundle 后计量；对 **18 个最终 JS 分包**逐一核对字节/gzip，并与浏览器实际首页请求列表匹配通过。
+- 构建报告表明主成本来自 React、路由与表格等 Ant Design 组件。逐组件导入没有足以支持扩大改动的收益，已恢复全部实验性组件导入。唯一运行时改动是中文语言包从 `antd/locale/zh_CN` 切换到 `antd/es/locale/zh_CN`；最终报告不再包含 antd CJS 中文语言包路径。
+- 首页实际加载 JS **1,050,535 B → 1,048,763 B**，本地 gzip **341,165 B → 340,680 B**，分别减少约 **0.17% / 0.14%**。此结果是在前一批 22.7% 首屏原始体积减少基础上的微小增益；不宣称明显速度提升，主包仍超过 500 kB，警告没有关闭。
+- 生产浏览器测量使用本机 gzip 静态服务、冻结演示 API 响应、全新浏览器上下文、桌面 1440×1000、4 倍 CPU 降速、150 ms 网络延迟、200,000 B/s 下载，前后顺序交替，各 6 次。首页出现“分析 DEMO001”按钮的中位时间为 **4,577.5 ms → 4,621.5 ms**，样本分别在 4,331–4,763 ms / 4,322–5,095 ms 内；没有可确认的提速。首轮与回归并行运行的计时已弃用，以上为没有并行构建/测试的复测。Coverage 估算执行字符比例约 41.6% / 41.5%，只代表初次渲染执行范围，不等于可删除代码比例，也不代表经过完整交互的覆盖率。API mock 不含真实后端延迟，Coverage 本身也有开销，不能外推真实用户性能。结果位于 `.runtime/p3-closeout-measure.json`。
+- 同一生产探针验证中文“下一页”分页标签，模型设置页仅在导航时加载 2 个 JS 分包，前后均无 pageerror。探针最初误用另一浏览器库的 Coverage 返回字段，修正为 Playwright 的 source/functions/ranges 并处理嵌套未执行范围后完成；失败探针已关闭浏览器与临时服务。
+- 根目录 `pnpm typecheck`、改动 TS/TSX 的 ESLint 通过。ESLint 读取依赖遇到沙箱 EPERM，在获准的当前用户环境完成。`pnpm test:e2e` 首轮 **34 passed、1 failed，2.5 分钟**：既有侧栏测试在键盘调整后的宽度动画结束前取拖拽坐标，未击中手柄，实际宽度仍为 240。测试增加对实际宽度稳定为 240 的轮询断言，不增加固定 sleep、不修改产品拖拽逻辑；随后 `playwright test e2e/app-shell.spec.ts --repeat-each=3` 为 **9 passed，28.7 秒**。其余行情、配置、持仓、量化、SSE、错误恢复和深链接流程在本轮完整回归中通过；修复后仅复测受影响的外壳套件，未再重跑全部 35 项。
+- 分析构建（包含 tsc）退出码为 0；最终普通构建、诊断开关、文档与进程检查见本节最终补记。后端未修改，未重跑后端测试、真实供应商/付费模型或 PostgreSQL 验证。未更改样式编译或布局，未重复 Less HMR 专项。
+
+最终补记：最终分析构建与普通构建均退出 **0**，普通构建的 Vite 阶段 **12.34 秒**。18 个落盘 JS 分包的原始/gzip 大小与报告一致，入口静态依赖与浏览器实际请求一致；普通构建未刷新诊断报告，前端产物与分析构建一致。最终 ESLint、Ant Design 入口检查（0 issues、0 skipped）、8 份源码/文档格式检查通过，276 个本地 Markdown 链接目标有效，`git diff --check` 通过（仅 autocrlf 提示）。已核对新增诊断插件，未暂存或提交；无关导入实验文件已恢复原内容。本次 API/worker/web 登记进程树已停止，8001/5173 已释放，8000 的其他工作 PID 30560 保留。
+
 ## 重构 P3：前端目录、职责与按需加载（2026-11-03）
 
 - 剩余 Dashboard、Portfolio、ModelSettings、Jobs/Job、Reports/Report、Roadmap 页面，以及 AuthGate、AgentStream、GeneratedReport、StreamText、ReportWorkspace、IconParkFont 迁为目录内 `index.tsx + index.less`。提取行情 QuoteTable、模型 SettingsForm、持仓 PositionEditor/PositionImportPanel/PositionTable。共同布局保留单一 CSS Module，报告/路线图专属规则与 Agent 展示样式归对应模块；未修改 Less 编译适配、后端业务、依赖或锁文件。

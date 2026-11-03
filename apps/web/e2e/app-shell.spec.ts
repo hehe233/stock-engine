@@ -23,6 +23,8 @@ test('sidebar routes, collapse and width preferences remain usable after reload'
   await handle.focus();
   await page.keyboard.press('ArrowRight');
   await expect(handle).toHaveAttribute('aria-valuenow', '240');
+  // The state updates before the width transition finishes; drag the settled handle.
+  await expect.poll(async () => (await sidebar.boundingBox())!.width).toBe(240);
   const rect = (await handle.boundingBox())!;
   await page.mouse.move(rect.x + rect.width / 2, rect.y + 200);
   await page.mouse.down();

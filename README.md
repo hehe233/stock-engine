@@ -184,6 +184,8 @@ pnpm test:e2e
 
 其他平台可将 Playwright 配置中的 `channel: 'msedge'` 删除，并安装 Chromium。生产构建输出在 `apps/web/dist`，本地 Vite 代理不包含在静态构建中；正式部署时需为 `/api` 配置反向代理，为页面路由配置 SPA fallback。
 
+需要分析前端体积时，用 `scripts/build-web.ps1 -Analyze` 代替普通构建命令，不要同时运行两次构建。等待 `.runtime/build.exit-code` 为 `0` 后读取 `.runtime/web-bundle-report.json`：`entrypoints` 汇总入口及其静态依赖的 JS 原始/gzip 大小，`chunks` 列出各分包、静态/动态导入和按 `renderedLength` 排序的模块。模块大小是压缩前估算，gzip 是本地计算；实际首屏请求还应结合浏览器验证。普通构建不生成或刷新该报告，旧报告不能作为新构建结果。诊断文件只写入 `.runtime/`，不随站点发布。
+
 ## Agent 流式研究与报告抽屉
 
 提交研究后，任务页按时间顺序展示计算步骤、模型返回的可展示思考内容、工具参数及完整结果、Markdown 正文。正文与结构化解读按真实模型增量更新，前端逐字呈现；模型未提供思考字段时明确提示，规则模式不生成虚构思考。

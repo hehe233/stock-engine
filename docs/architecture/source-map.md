@@ -52,3 +52,4 @@ P0 公共入口：后端请求依赖在 `apps/api/app/http/dependencies.py`，�
 - `features/model-settings/SettingsForm/` 管理表单、密钥草稿与保存/测试；ModelSettings 页面管理配置选择/启用/删除及未保存确认。
 - `components/AuthGate/` 与 `components/agent/` 下独立展示组件使用成对入口；useJobStream、stream 等纯逻辑文件保持描述性名称。Agent 面板共用 `panel.module.css`，共享工作台布局仍在 `styles/Workbench.module.css`，报告和路线图专属规则归各页面。
 - 迁移行为回归在 `apps/web/e2e/refactor-p3.spec.ts`；首页资源对比与范围见[重构方案](../refactor-plan.md)和[验证记录](../history/verification.md)。
+- 可选构建诊断在 `apps/web/build/bundle-report.ts`，由 `scripts/build-web.ps1 -Analyze` 启用；输出最终 JS 大小、入口静态依赖和模块构成，结果位于 `.runtime/web-bundle-report.json`。使用与指标含义见[项目 README](../../README.md)。中文语言包经 `antd/es/locale/zh_CN` 保持 ESM 导入。
