@@ -10,7 +10,7 @@
 
 ## 数据流
 
-`assistant.py` 在任务模式调用模型 `.stream()`；`streaming.py` 把文本、公开思考字段和结构化预览发送到 LangGraph custom channel。`run_job.py` 消费 custom + updates，验证任务租约与取消状态后，按到达顺序提交到现有 `JobEvent`。`routes.py` 以 SSE `progress` 事件输出，任务终止且所有分页排空后发送 `done`。
+`assistant.py` 在任务模式调用模型 `.stream()`；`streaming.py` 把文本、公开思考字段和结构化预览发送到 LangGraph custom channel。`run_job.py` 消费 custom + updates，验证任务租约与取消状态后，按到达顺序提交到现有 `JobEvent`。`jobs/routes.py` 以 SSE `progress` 事件输出，任务终止且所有分页排空后发送 `done`。
 
 | kind                    | 主要 payload                    | 展示                           |
 | ----------------------- | ------------------------------- | ------------------------------ |

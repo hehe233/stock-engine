@@ -127,7 +127,7 @@ def test_profile_conflicts_validation_and_legacy_save_stay_consistent(client):
 
 
 def test_profile_connection_test_uses_selected_profile_key_without_saving(client, monkeypatch):
-    from app.services import model_settings
+    from app.model_settings import service as model_settings
 
     a = create(client)
     b = create(client, "供应商 B", api_key="b-secret")
@@ -139,7 +139,7 @@ def test_profile_connection_test_uses_selected_profile_key_without_saving(client
         return {"ok": True, "message": "mock"}
 
     monkeypatch.setattr(model_settings, "probe_connection", probe)
-    monkeypatch.setattr("app.routes.probe_connection", probe)
+    monkeypatch.setattr("app.model_settings.routes.probe_connection", probe)
     response = client.post(
         f"{ROOT}/{b['id']}/test",
         json={

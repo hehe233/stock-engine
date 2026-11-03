@@ -21,7 +21,7 @@ const QuantPage = lazy(() =>
   import('./pages/Quant').then((module) => ({ default: module.QuantPage })),
 );
 const QuantRunPage = lazy(() =>
-  import('./pages/Quant').then((module) => ({ default: module.QuantRunPage })),
+  import('./pages/QuantRun').then((module) => ({ default: module.QuantRunPage })),
 );
 
 // 服务端状态交给 Query 管理；筛选词等临时交互状态留在组件中。

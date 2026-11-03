@@ -13,13 +13,13 @@ from app.agents.research import build_research_graph
 from app.agents.run_job import execute_job
 from app.core.config import Settings
 from app.db import AnalysisRun, ResearchJob
+from app.jobs.service import claim_job, recover_expired_jobs
 from app.main import create_app
+from app.market.calendar import market_session
 from app.providers.base import ProviderError
 from app.providers.normalization import source_time
 from app.providers.public import normalize_rows
 from app.schemas import ModelInsight
-from app.services.calendar import market_session
-from app.services.jobs import claim_job, recover_expired_jobs
 from app.shared.securities import normalize_symbol
 from app.shared.time import utc_now
 
@@ -318,7 +318,7 @@ def test_blank_credentials_disable_optional_services():
 
 
 def test_retry_cannot_bypass_queue_capacity(client, settings):
-    from app.services.jobs import finish_failed
+    from app.jobs.service import finish_failed
 
     settings.max_pending_jobs = 1
     first = submit(client).json()

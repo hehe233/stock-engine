@@ -9,10 +9,9 @@ import duckdb
 import numpy as np
 import pandas as pd
 from fastapi import HTTPException
-from sqlalchemy import select
 
-from app.db import QuantDataset, ResearchSnapshot
-from app.research_catalog import HISTORY_CASES
+from app.db import QuantDataset
+from app.research.queries import archived_history
 from app.shared.securities import normalize_symbol
 from app.shared.time import SHANGHAI, as_utc, utc_now
 
@@ -239,24 +238,13 @@ def load_frame(settings, row):
 
 def import_history(session, settings):
     rows, references = [], []
-    for case in HISTORY_CASES:
-        snap = session.scalar(
-            select(ResearchSnapshot)
-            .where(
-                ResearchSnapshot.kind == "history",
-                ResearchSnapshot.mode == settings.market_provider,
-                ResearchSnapshot.key.endswith(":" + case["id"]),
-            )
-            .order_by(ResearchSnapshot.observed_at.desc())
-            .limit(1)
-        )
-        if snap:
-            references.append(snap.id)
-            for bar in snap.rows:
-                if all(bar.get(c) for c in ("open", "high", "low", "close")):
-                    rows.append(
-                        {**{c: bar[c] for c in REQUIRED if c != "symbol"}, "symbol": case["symbol"]}
-                    )
+    for batch in archived_history(session, settings.market_provider):
+        references.append(batch["snapshot_id"])
+        for bar in batch["rows"]:
+            if all(bar.get(c) for c in ("open", "high", "low", "close")):
+                rows.append(
+                    {**{c: bar[c] for c in REQUIRED if c != "symbol"}, "symbol": batch["symbol"]}
+                )
     if not rows:
         raise HTTPException(422, "尚无完整 OHLC 历史批次，请先在历史案例页获取真实日线，或导入 CSV")
     frame = validate_frame(pd.DataFrame(rows), settings.market_provider)

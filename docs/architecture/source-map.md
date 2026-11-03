@@ -6,23 +6,33 @@
 
 P0 公共入口：后端请求依赖在 `apps/api/app/http/dependencies.py`，时间与证券规则在 `shared/time.py`、`shared/securities.py`，采集进程与标准化在 `providers/runner.py`、`providers/normalization.py`。前端组件样式编译在 `apps/web/build/component-less.ts`，目录示例是 `components/ErrorNotice/index.tsx` 与 `index.less`，隔离验证在 `apps/web/tests/component-less.test.ts`。
 
-| 领域                 | 前端入口                                                                    | 后端入口与相关测试                                                                                                                                            |
-| -------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 路由、应用外壳、鉴权 | `apps/web/src/main.tsx`、`App.tsx`、`components/AuthGate.tsx`               | `apps/api/app/core/security.py`；`apps/web/e2e/app-shell.spec.ts`                                                                                             |
-| 行情与分析入口       | `apps/web/src/pages/Dashboard.tsx`、`api/client.ts`                         | `apps/api/app/routes.py`、`services/market.py`、`providers/`；`apps/api/tests/test_workflow.py`、`test_p1.py`                                                 |
-| 任务、流式与报告     | `apps/web/src/pages/Jobs.tsx`、`Reports.tsx`、`components/agent/`           | `apps/api/app/services/jobs.py`、`agents/`、`worker.py`；`apps/api/tests/test_agent_stream.py`、`test_p1.py`                                                  |
-| 模型配置             | `apps/web/src/pages/ModelSettings.tsx`、`api/client.ts`                     | `apps/api/app/services/model_settings.py`、`agents/models.py`；`apps/api/tests/test_model_settings.py`、`test_model_profiles.py`、`test_profile_migration.py` |
-| 研究与历史案例       | `apps/web/src/pages/Research.tsx`、`History.tsx`、`api/research.ts`         | `apps/api/app/research_routes.py`、`services/research_data.py`、`providers/research.py`、`research_catalog.py`；`apps/api/tests/test_p2.py`                   |
-| 持仓                 | `apps/web/src/pages/Portfolio.tsx`、`api/research.ts`                       | `apps/api/app/services/portfolio.py`、`research_schemas.py`；`apps/api/tests/test_p2.py`                                                                      |
-| 量化实验             | `apps/web/src/pages/Quant.tsx`、`api/quant.ts`                              | `apps/api/app/quant/`；`apps/api/tests/test_quant.py`、`apps/web/e2e/quant.spec.ts`                                                                           |
-| 主题与通用展示       | `apps/web/src/styles/`、`components/ErrorNotice/index.tsx`、`lib/format.ts` | [工作区界面](../modules/ui-workspace.md)                                                                                                                      |
-| 数据库与契约         | `apps/web/src/api/types.ts` 及各领域 API 文件                               | `apps/api/app/db.py`、`schemas.py`、`research_schemas.py`、`quant/schemas.py`、`apps/api/migrations/`                                                         |
-| 配置与进程           | `apps/web/vite.config.ts`、`playwright.config.ts`                           | `apps/api/app/core/config.py`、`main.py`、`scripts/`；运行记录在 `.runtime/`                                                                                  |
+| 领域                 | 前端入口                                                                                            | 后端入口与相关测试                                                                                                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 路由、应用外壳、鉴权 | `apps/web/src/main.tsx`、`App.tsx`、`components/AuthGate.tsx`                                       | `apps/api/app/core/security.py`；`apps/web/e2e/app-shell.spec.ts`                                                                                                                      |
+| 行情与分析入口       | `apps/web/src/pages/Dashboard.tsx`、`api/client.ts`                                                 | `apps/api/app/market/routes.py`、`market/service.py`、`reports/routes.py`、`providers/`；`apps/api/tests/test_workflow.py`、`test_p1.py`                                               |
+| 任务、流式与报告     | `apps/web/src/pages/Jobs.tsx`、`Reports.tsx`、`components/agent/`                                   | `apps/api/app/jobs/service.py`、`agents/`、`worker.py`；`apps/api/tests/test_agent_stream.py`、`test_p1.py`                                                                            |
+| 模型配置             | `apps/web/src/pages/ModelSettings.tsx`、`api/client.ts`                                             | `apps/api/app/model_settings/service.py`、`agents/models.py`；`apps/api/tests/test_model_settings.py`、`test_model_profiles.py`、`test_profile_migration.py`                           |
+| 研究与历史案例       | `apps/web/src/pages/Research/index.tsx`、`History/index.tsx`、`api/research.ts`                     | `apps/api/app/research/routes.py`、`research/collection.py`、`research/queries.py`、`research/history.py`、`providers/research.py`、`research/catalog.py`；`apps/api/tests/test_p2.py` |
+| 持仓                 | `apps/web/src/pages/Portfolio.tsx`、`api/research.ts`                                               | `apps/api/app/portfolio/routes.py`、`portfolio/service.py`、`portfolio/schemas.py`；`apps/api/tests/test_p2.py`                                                                        |
+| 量化实验             | `apps/web/src/pages/Quant/index.tsx`、`pages/QuantRun/index.tsx`、`features/quant/`、`api/quant.ts` | `apps/api/app/quant/`；`apps/api/tests/test_quant.py`、`apps/web/e2e/quant.spec.ts`                                                                                                    |
+| 主题与通用展示       | `apps/web/src/styles/`、`components/ErrorNotice/index.tsx`、`lib/format.ts`                         | [工作区界面](../modules/ui-workspace.md)                                                                                                                                               |
+| 数据库与契约         | `apps/web/src/api/types.ts` 及各领域 API 文件                                                       | `apps/api/app/db.py`、`schemas.py`、`research/schemas.py`、`portfolio/schemas.py`、`quant/schemas.py`、`apps/api/migrations/`                                                          |
+| 配置与进程           | `apps/web/vite.config.ts`、`playwright.config.ts`                                                   | `apps/api/app/core/config.py`、`main.py`、`scripts/`；运行记录在 `.runtime/`                                                                                                           |
 
 ## 三条关键阅读链
 
-- **提交研究**：`Dashboard.tsx` → `api/client.ts` → `routes.py` → `services/jobs.py` → `worker.py` → `agents/run_job.py` → `research.py` / `assistant.py` → 事件与报告入库 → `useJobStream.ts` / `stream.ts` → `AgentStream.tsx` / `ReportWorkspace.tsx`。
-- **更新证据**：`Research.tsx` → `api/research.ts` → `research_routes.py` → `services/research_data.py` → worker 隔离采集 → `providers/research.py` → 新快照；任务通过 `frozen_context` 冻结可见证据。
-- **量化实验**：`Quant.tsx` → `api/quant.ts` → `quant/routes.py` → `data.py` / `service.py` → worker → `quant/run.py` → `features.py` / `engine.py` / `backtest.py` → 产物与报告。
+- **提交研究**：`Dashboard.tsx` → `api/client.ts` → `jobs/routes.py` → `jobs/service.py` → `jobs/context.py` → `worker.py` → `agents/run_job.py` → `research.py` / `assistant.py` → 事件与报告入库 → `useJobStream.ts` / `stream.ts` → `AgentStream.tsx` / `ReportWorkspace.tsx`。
+- **更新证据**：`Research/index.tsx` → `api/research.ts` → `research/routes.py` → `research/collection.py` → worker 隔离采集 → `providers/research.py` → 新快照；任务通过 `jobs/context.py` 组合 `research/evidence.py`、`quant/evidence.py` 及显式持仓，冻结可见证据。
+- **量化实验**：`Quant/index.tsx` → `api/quant.ts` → `quant/routes.py` → `data.py` / `service.py` → worker → `quant/run.py` → `features.py` / `engine.py` / `backtest.py` → 产物与报告。
 
 测试命令及选择依据见[全局规则](../agent-rules/global.md)。新增能力先检查对应链路，只有跨领域影响时才扩大阅读范围。
+
+## P1 模块与事务归属
+
+- `pages/Quant/` 与 `pages/QuantRun/` 分别懒加载；导入草稿和预览在 `features/quant/DatasetImportPanel/`，实验参数在 `ExperimentForm/`，报告与预测分页在 `QuantRunReport/`。可视模块均有 `index.tsx + index.less`，共同布局复用 `styles/Workbench.module.css`。
+- `features/research/components/ResearchDataset/` 与 `SourceNotice/` 由 Research、History 共同使用，页面之间不再导入实现。
+- `http/system.py` 负责 health/config；market、model_settings、jobs、reports、research、portfolio 和 quant 的路由由 `main.py` 装配。URL 和认证保持兼容。
+- `jobs/service.py` 负责新建、取消、重试的写入与提交；新建和重试在 service 内共用容量锁。事件辅助函数只添加记录，不自行提交。`reports/service.py` 保存短时规则报告。
+- `portfolio/service.py` 的导入、更新、删除共用持仓锁；`model_settings/service.py` 的保存、启用、删除共用配置锁。请求 Session 结束时关闭，未提交事务回滚；worker Session 生命周期仍由调用方管理。
+- 研究采集、快照查询、历史统计和证据分别归 `research/collection.py`、`queries.py`、`history.py`、`evidence.py`。`quant/data.py` 经 `research/queries.py` 的 `archived_history` 读取普通数据，不直接读取研究 ORM。
+- 事务失败与重试冻结验证见 `apps/api/tests/test_refactor_transactions.py`；浏览器迁移验证见 `apps/web/e2e/refactor-p1.spec.ts`。

@@ -3,6 +3,7 @@
 import csv
 import io
 from decimal import Decimal
+from threading import Lock
 from uuid import uuid4
 
 from fastapi import HTTPException
@@ -10,9 +11,11 @@ from pydantic import ValidationError
 from sqlalchemy import select
 
 from app.db import MarketSnapshot, PositionLot, ServiceState
-from app.research_schemas import PositionInput
-from app.services.calendar import market_session
+from app.market.calendar import market_session
+from app.portfolio.schemas import PositionInput
 from app.shared.time import SHANGHAI, as_utc, utc_now
+
+positions_lock = Lock()
 
 CSV_COLUMNS = [
     "symbol",
@@ -69,22 +72,24 @@ def lot_key(row):
 
 
 def import_lots(session, rows, mode):
-    existing = session.scalars(select(PositionLot).where(PositionLot.mode == mode)).all()
-    known, inserted, skipped = {lot_key(row) for row in existing}, 0, 0
-    for data in rows:
-        if mode == "public" and data.symbol.startswith("DEMO"):
-            raise HTTPException(422, "公开模式不能导入 DEMO 持仓")
-        key = lot_key(data)
-        if key in known:
-            skipped += 1
-            continue
-        known.add(key)
-        session.add(PositionLot(id=str(uuid4()), mode=mode, **data.model_dump()))
-        inserted += 1
-    if len(existing) + inserted > 2000:
-        raise HTTPException(422, "单机版本最多保存 2000 笔持仓")
-    session.commit()
-    return {"inserted": inserted, "skipped": skipped}
+    """Own deduplication, capacity validation and the complete import transaction."""
+    with positions_lock:
+        existing = session.scalars(select(PositionLot).where(PositionLot.mode == mode)).all()
+        known, inserted, skipped = {lot_key(row) for row in existing}, 0, 0
+        for data in rows:
+            if mode == "public" and data.symbol.startswith("DEMO"):
+                raise HTTPException(422, "公开模式不能导入 DEMO 持仓")
+            key = lot_key(data)
+            if key in known:
+                skipped += 1
+                continue
+            known.add(key)
+            session.add(PositionLot(id=str(uuid4()), mode=mode, **data.model_dump()))
+            inserted += 1
+        if len(existing) + inserted > 2000:
+            raise HTTPException(422, "单机版本最多保存 2000 笔持仓")
+        session.commit()
+        return {"inserted": inserted, "skipped": skipped}
 
 
 def sellable_quantity(row, today, dates):
@@ -208,3 +213,27 @@ def portfolio_view(session, mode, symbol=None, snapshot_override=None):
             "ETF 的交易制度必须按具体产品确认，不能仅凭 ETF 类别推断 T+0。",
         ],
     }
+
+
+def update_lot(session, lot_id: str, payload: PositionInput, mode: str):
+    with positions_lock:
+        row = session.get(PositionLot, lot_id)
+        if row is None or row.mode != mode:
+            raise HTTPException(404, "持仓不存在")
+        if mode == "public" and payload.symbol.startswith("DEMO"):
+            raise HTTPException(422, "公开模式不支持演示持仓")
+        for key, value in payload.model_dump().items():
+            setattr(row, key, value)
+        row.updated_at = utc_now()
+        session.commit()
+    return {"updated": True}
+
+
+def delete_lot(session, lot_id: str, mode: str):
+    with positions_lock:
+        row = session.get(PositionLot, lot_id)
+        if row is None or row.mode != mode:
+            raise HTTPException(404, "持仓不存在")
+        session.delete(row)
+        session.commit()
+    return {"deleted": True}

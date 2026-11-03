@@ -11,13 +11,18 @@ from app.core.config import Settings, get_settings
 from app.core.security import AccessMiddleware
 from app.core.security import router as auth_router
 from app.db import build_database
+from app.http.system import router as system_router
+from app.jobs.routes import router as jobs_router
+from app.market.routes import router as market_router
+from app.market.service import MarketService
+from app.model_settings.routes import router as model_settings_router
+from app.portfolio.routes import router as portfolio_router
 from app.providers.demo import DemoQuoteProvider
 from app.providers.public import PublicQuoteProvider
 from app.quant.routes import router as quant_router
-from app.research_routes import router as research_router
-from app.routes import router
-from app.services.market import MarketService
-from app.services.research_data import bootstrap_demo
+from app.reports.routes import router as reports_router
+from app.research.demo import bootstrap_demo
+from app.research.routes import router as research_router
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +83,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         return await request_validation_exception_handler(request, exc)
 
-    app.include_router(router)
+    app.include_router(system_router)
+    app.include_router(market_router)
+    app.include_router(model_settings_router)
+    app.include_router(reports_router)
+    app.include_router(jobs_router)
+    app.include_router(portfolio_router)
     app.include_router(research_router)
     app.include_router(quant_router)
     app.include_router(auth_router)

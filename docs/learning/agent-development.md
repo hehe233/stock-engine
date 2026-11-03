@@ -21,7 +21,7 @@
 1. `apps/web/src/pages/Dashboard.tsx`：点击「分析」后，mutation 传入 `symbol` 和当前 `snapshot_id`。
 2. `apps/web/src/api/client.ts`：发送 `POST /api/jobs`，附带分析模式和模型名，得到 202 + job_id。
 3. `apps/api/app/schemas.py`：Pydantic 验证请求格式，不合格返回 422。
-4. `services/jobs.py`：验证快照和模型列表，任务入库。`worker.py` 原子领取任务，启动受超时控制的子进程。
+4. `jobs/service.py`：验证快照和模型列表，任务入库。`worker.py` 原子领取任务，启动受超时控制的子进程。
 5. `agents/run_job.py` 打开 checkpointer；`research.py` 计算规则；`assistant.py` 在模型模式下执行「选择工具 → 读取证据 → 再判断 → 结构化输出」。
 6. `run_job.py` 把 AnalysisReport、原始引用证据、任务成功状态放在同一事务中提交。
 7. `pages/Jobs.tsx` 订阅 SSE，并轮询最终状态，成功后跳转报告页。刷新报告时根据 ID 从数据库读取。
@@ -77,7 +77,7 @@ SQLAlchemy 的常见顺序是：创建 Session → 查询 / 添加对象 → `co
 
 ## 第六课：理解任务、检查点和事务的边界
 
-模型设置的完整链路可从 `pages/ModelSettings.tsx` 开始：表单提交 → `services/model_settings.py` 校验与保存不可变版本 → `/api/config` 返回无密钥的模型列表 → 创建任务绑定 model_config_id → run_job 读取该版本。API 进程与 worker 不能只靠各自的内存变量同步配置，所以这里使用共享数据库。
+模型设置的完整链路可从 `pages/ModelSettings.tsx` 开始：表单提交 → `model_settings/service.py` 校验与保存不可变版本 → `/api/config` 返回无密钥的模型列表 → 创建任务绑定 model_config_id → run_job 读取该版本。API 进程与 worker 不能只靠各自的内存变量同步配置，所以这里使用共享数据库。
 
 多套配置新增 `model_profiles`：稳定 ID 与名称指向最新不可变版本；活动配置指针决定新任务的供应商。编辑、切换和删除不会修改已提交任务使用的版本。对照 [多配置设计与操作](../modules/model-profiles.md) 阅读迁移和回归测试。
 
@@ -91,13 +91,13 @@ SQLAlchemy 的常见顺序是：创建 Session → 查询 / 添加对象 → `co
 
 ## 第七课：免费数据不是可靠数据库
 
-阅读 `providers/public.py` 的字段标准化，再看 `services/market.py` 的不可变快照。练习把一条记录的量比设为 null，观察分数变为不可用；把只有时分秒的更新时间传入 source_time，观察其保持未知。
+阅读 `providers/public.py` 的字段标准化，再看 `market/service.py` 的不可变快照。练习把一条记录的量比设为 null，观察分数变为不可用；把只有时分秒的更新时间传入 source_time，观察其保持未知。
 
 五分钟采集、供应商延迟和浏览器读取是不同的时钟。源时间未知时，不应使用本机当前时间把旧行情包装成实时行情。详见 [P1 数据边界](../history/p1.md)。
 
 ## 第八课：P2 的持久队列和证据冻结
 
-从 `pages/Research.tsx` 的更新按钮开始：`researchApi.refresh` → `research_routes.py` → `research_data.enqueue`。HTTP 只保存请求并返回 202，worker 的 `process_one` 领取请求、隔离采集、标准化、保存新批次。失败时保留旧批次与错误，页面分别展示数据和请求状态。
+从 `pages/Research/index.tsx` 的更新按钮开始：`researchApi.refresh` → `research/routes.py` → `research/collection.py` ? `enqueue`。HTTP 只保存请求并返回 202，worker 的 `process_one` 领取请求、隔离采集、标准化、保存新批次。失败时保留旧批次与错误，页面分别展示数据和请求状态。
 
 阅读 `providers/research.py` 的白名单：龙虎榜接口即使返回「上榜后涨幅」，也不会进入证据。阅读 `frozen_context`：任务提交后，新批次不会改变已提交任务的上下文。`read_research` 与 `read_portfolio` 是受控读取工具，模型不能直接操作数据库或券商。
 
@@ -105,7 +105,7 @@ SQLAlchemy 的常见顺序是：创建 Session → 查询 / 添加对象 → `co
 
 ## 第九课：金额、交易制度和历史偏差
 
-阅读 `services/portfolio.py`：成本用 Decimal 计算，行情缺失时估值和盈亏保持 null。相同证券多笔持仓先汇总再计算集中度。T+1 依赖实际交易日历；ETF 制度由用户确认，不能用证券类别猜测。
+阅读 `portfolio/service.py`：成本用 Decimal 计算，行情缺失时估值和盈亏保持 null。相同证券多笔持仓先汇总再计算集中度。T+1 依赖实际交易日历；ETF 制度由用户确认，不能用证券类别猜测。
 
 阅读 `history_statistics`：21 个收盘价形成 20 个交易日收益区间。所有重叠窗口中挑选强弱例子是事后描述，不等于买卖规则，更不等于样本外胜率。下一阶段需要先定义标签、信息可见时点、训练/验证切分及交易约束。
 

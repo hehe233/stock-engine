@@ -7,18 +7,15 @@ from sqlalchemy import select
 
 from app.agents.run_job import execute_job
 from app.db import DataRequest, MarketSnapshot, PositionLot, ResearchJob, ResearchSnapshot
+from app.jobs.context import frozen_context
+from app.jobs.service import claim_job
 from app.main import create_app
+from app.portfolio.schemas import PositionInput
+from app.portfolio.service import sellable_quantity
 from app.providers.base import ProviderError
 from app.providers.research import normalize_research, safe_url
-from app.research_schemas import PositionInput
-from app.services.jobs import claim_job
-from app.services.portfolio import sellable_quantity
-from app.services.research_data import (
-    frozen_context,
-    history_statistics,
-    process_one,
-    recover_requests,
-)
+from app.research.collection import process_one, recover_requests
+from app.research.history import history_statistics
 from app.shared.time import SHANGHAI, utc_now
 
 
@@ -69,7 +66,7 @@ def test_durable_collection_deduplicates_and_saves_empty_as_unconfirmed(
 
 
 def test_failed_collection_preserves_last_success(client, settings, monkeypatch):
-    from app.services import research_data
+    from app.research import collection as research_data
 
     first = client.get(f"/api/research/data?kind=ladder&date={today()}").json()["snapshot"]["id"]
     job = client.post("/api/research/refresh", json={"kind": "ladder", "date": today()}).json()

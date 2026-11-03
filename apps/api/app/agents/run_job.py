@@ -9,9 +9,9 @@ from app.agents.models import create_chat_model
 from app.agents.research import build_research_graph
 from app.core.config import get_settings
 from app.db import AnalysisRun, MarketSnapshot, ModelConfiguration, ResearchJob, build_database
+from app.jobs.service import event, finish_failed
+from app.model_settings.service import apply_configuration
 from app.schemas import AnalysisReport
-from app.services.jobs import event, finish_failed
-from app.services.model_settings import apply_configuration
 from app.shared.time import as_utc, utc_now
 
 

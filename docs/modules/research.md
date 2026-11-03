@@ -43,17 +43,17 @@
 
 ## 数据层与 Agent 阅读路径
 
-| 文件                                | 职责                                                        |
-| ----------------------------------- | ----------------------------------------------------------- |
-| `app/research_schemas.py`           | 查询、日期、CSV 和持仓输入校验                              |
-| `app/providers/research_collect.py` | AKShare 网络采集，运行于隔离进程                            |
-| `app/providers/research.py`         | 字段白名单、单位、日期与来源限制，不保留龙虎榜事后收益      |
-| `app/services/research_data.py`     | 持久队列、批次查询、行业/资金比较、历史窗口、冻结上下文     |
-| `app/services/portfolio.py`         | Decimal 成本、CSV 去重、行情关联、T+1 与集中度              |
-| `app/research_routes.py`            | 薄 HTTP 接口，共用已有访问控制                              |
-| `app/services/jobs.py`              | 绑定用户所见行情，冻结提交前已入库且日期匹配的研究证据      |
-| `app/agents/assistant.py`           | `read_research` / `read_portfolio` 读取任务证据，不临时联网 |
-| `migrations/versions/0004_p2.py`    | 采集请求、研究批次、持仓表及任务 context                    |
+| 文件                                              | 职责                                                                |
+| ------------------------------------------------- | ------------------------------------------------------------------- |
+| `app/research/schemas.py`、`portfolio/schemas.py` | 查询、日期、CSV 和持仓输入校验                                      |
+| `app/providers/research_collect.py`               | AKShare 网络采集，运行于隔离进程                                    |
+| `app/providers/research.py`                       | 字段白名单、单位、日期与来源限制，不保留龙虎榜事后收益              |
+| `app/research/collection.py`                      | 持久队列与采集调度；查询、历史与证据分别归 queries/history/evidence |
+| `app/portfolio/service.py`                        | Decimal 成本、CSV 去重、行情关联、T+1 与集中度                      |
+| `app/research/routes.py`、`portfolio/routes.py`   | 薄 HTTP 接口，共用已有访问控制                                      |
+| `app/jobs/service.py`、`jobs/context.py`          | 绑定用户所见行情，冻结提交前已入库且日期匹配的研究证据              |
+| `app/agents/assistant.py`                         | `read_research` / `read_portfolio` 读取任务证据，不临时联网         |
+| `migrations/versions/0004_p2.py`                  | 采集请求、研究批次、持仓表及任务 context                            |
 
 任务证据以个股源日期限制研究日期；个股源日期缺失时只可按采集日期关联，并保留「未知」限制。这是提交时可复现证据，不是历史时点回测保证。普通任务不包含持仓。
 

@@ -162,24 +162,25 @@ def snapshot_configuration(session, settings):
 
 
 def save_settings(session, base, payload):
-    settings = draft_settings(session, base, payload)
-    row = snapshot_configuration(session, settings)
-    profile_id = active_profile_id(session)
-    profile = session.get(ModelProfile, profile_id) if profile_id else None
-    if profile:
-        profile.configuration_id = row.id
-    else:
-        # 兼容原单配置接口：第一次保存自动成为可管理配置。
-        name = "默认配置"
-        suffix = 1
-        while session.scalar(select(ModelProfile.id).where(ModelProfile.name == name)):
-            suffix += 1
-            name = f"默认配置 {suffix}"
-        profile = ModelProfile(id=str(uuid4()), name=name, configuration_id=row.id)
-        session.add(profile)
-    set_active(session, row.id, profile.id)
-    session.commit()
-    return public_settings(session, base)
+    with settings_lock:
+        settings = draft_settings(session, base, payload)
+        row = snapshot_configuration(session, settings)
+        profile_id = active_profile_id(session)
+        profile = session.get(ModelProfile, profile_id) if profile_id else None
+        if profile:
+            profile.configuration_id = row.id
+        else:
+            # 兼容原单配置接口：第一次保存自动成为可管理配置。
+            name = "默认配置"
+            suffix = 1
+            while session.scalar(select(ModelProfile.id).where(ModelProfile.name == name)):
+                suffix += 1
+                name = f"默认配置 {suffix}"
+            profile = ModelProfile(id=str(uuid4()), name=name, configuration_id=row.id)
+            session.add(profile)
+        set_active(session, row.id, profile.id)
+        session.commit()
+        return public_settings(session, base)
 
 
 def set_active(session, configuration_id, profile_id):
@@ -228,47 +229,53 @@ def profile_draft(session, base, payload, profile_id=None):
 
 
 def save_profile(session, base, payload, profile_id=None):
-    settings = profile_draft(session, base, payload, profile_id)
-    duplicate = session.scalar(select(ModelProfile).where(ModelProfile.name == payload.name))
-    if duplicate and duplicate.id != profile_id:
-        raise HTTPException(409, "配置名称已存在，请使用其他名称")
-    if profile_id is None and session.scalar(select(func.count()).select_from(ModelProfile)) >= 30:
-        raise HTTPException(422, "最多保存 30 套模型配置")
-    row = snapshot_configuration(session, settings)
-    if profile_id:
-        profile = session.get(ModelProfile, profile_id)
-        profile.name, profile.configuration_id = payload.name, row.id
-        if active_profile_id(session) == profile_id:
-            set_active(session, row.id, profile_id)
-    else:
-        profile = ModelProfile(id=str(uuid4()), name=payload.name, configuration_id=row.id)
-        session.add(profile)
-    session.commit()
-    return profile_view(session, base, profile)
+    with settings_lock:
+        settings = profile_draft(session, base, payload, profile_id)
+        duplicate = session.scalar(select(ModelProfile).where(ModelProfile.name == payload.name))
+        if duplicate and duplicate.id != profile_id:
+            raise HTTPException(409, "配置名称已存在，请使用其他名称")
+        if (
+            profile_id is None
+            and session.scalar(select(func.count()).select_from(ModelProfile)) >= 30
+        ):
+            raise HTTPException(422, "最多保存 30 套模型配置")
+        row = snapshot_configuration(session, settings)
+        if profile_id:
+            profile = session.get(ModelProfile, profile_id)
+            profile.name, profile.configuration_id = payload.name, row.id
+            if active_profile_id(session) == profile_id:
+                set_active(session, row.id, profile_id)
+        else:
+            profile = ModelProfile(id=str(uuid4()), name=payload.name, configuration_id=row.id)
+            session.add(profile)
+        session.commit()
+        return profile_view(session, base, profile)
 
 
 def activate_profile(session, base, profile_id, revision):
-    profile = get_profile(session, profile_id, revision)
-    set_active(session, profile.configuration_id, profile.id)
-    session.commit()
-    return profile_view(session, base, profile)
+    with settings_lock:
+        profile = get_profile(session, profile_id, revision)
+        set_active(session, profile.configuration_id, profile.id)
+        session.commit()
+        return profile_view(session, base, profile)
 
 
 def delete_profile(session, base, profile_id, revision):
-    profile = get_profile(session, profile_id, revision)
-    if active_profile_id(session) == profile_id:
-        # 删除当前配置后显式停用 API，不偷偷启用另一家或退回 .env 密钥。
-        current = apply_configuration(
-            base, session.get(ModelConfiguration, profile.configuration_id)
-        )
-        disabled = current.model_copy(
-            update={"llm_api_key": None, "llm_model": "", "llm_models": []}
-        )
-        row = snapshot_configuration(session, disabled)
-        set_active(session, row.id, None)
-    session.delete(profile)
-    session.commit()
-    return {"deleted": True}
+    with settings_lock:
+        profile = get_profile(session, profile_id, revision)
+        if active_profile_id(session) == profile_id:
+            # 删除当前配置后显式停用 API，不偷偷启用另一家或退回 .env 密钥。
+            current = apply_configuration(
+                base, session.get(ModelConfiguration, profile.configuration_id)
+            )
+            disabled = current.model_copy(
+                update={"llm_api_key": None, "llm_model": "", "llm_models": []}
+            )
+            row = snapshot_configuration(session, disabled)
+            set_active(session, row.id, None)
+        session.delete(profile)
+        session.commit()
+        return {"deleted": True}
 
 
 def probe_connection(settings):

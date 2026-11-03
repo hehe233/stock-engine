@@ -1,6 +1,6 @@
 # Agent、任务与流式开发规范
 
-适用于 `apps/api/app/agents/`、`services/jobs.py`、worker 的研究任务管理以及前端 `components/agent/`。事件名称与 payload 的唯一说明入口为 [Agent 流式输出](../../modules/agent-stream.md)。
+适用于 `apps/api/app/agents/`、`jobs/service.py`、worker 的研究任务管理以及前端 `components/agent/`。事件名称与 payload 的唯一说明入口为 [Agent 流式输出](../../modules/agent-stream.md)。
 
 ## 修改前追踪
 

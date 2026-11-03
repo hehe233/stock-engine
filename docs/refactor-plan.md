@@ -2,9 +2,9 @@
 
 [返回文档总索引](README.md) · [架构索引](architecture/README.md) · [源码导航](architecture/source-map.md)
 
-评估日期：2026-11-03。本文记录结构评估、实施方案和进度；P0 基础改造已完成，后续按 P1–P3 分阶段推进。项目定位以 [AGENTS.md](../AGENTS.md) 和 [项目 README](../README.md) 为准：单用户、单机的 A 股研究与 Agent 学习项目，当前处于 P3 研究验证阶段。
+评估日期：2026-11-03。本文记录结构评估、实施方案和进度；P0、P1 结构改造已完成并通过对应验证，后续按 P2–P3 分阶段推进。项目定位以 [AGENTS.md](../AGENTS.md) 和 [项目 README](../README.md) 为准：单用户、单机的 A 股研究与 Agent 学习项目，当前处于 P3 研究验证阶段。
 
-前端组织方式按用户明确要求修订：参考 `E:/BRDKurin/project/code/a2a-frontend`，页面、可视业务模块和独立组件采用「语义目录 + `index.tsx` + `index.less`」。保留 CSS Modules 的局部作用域，样式语言迁到 Less；P0 已接入 Less/CSS Modules 并将 ErrorNotice 迁为目录组件；其他存量 CSS 与页面继续按 P1 分批迁移。
+前端组织方式按用户明确要求修订：参考 `E:/BRDKurin/project/code/a2a-frontend`，页面、可视业务模块和独立组件采用「语义目录 + `index.tsx` + `index.less`」。保留 CSS Modules 的局部作用域，样式语言迁到 Less；P0 已接入 Less/CSS Modules 并将 ErrorNotice 迁为目录组件；P1 已迁移 Quant/QuantRun/Research/History 及其领域模块；其余页面以后续功能改动为单位渐进迁移。
 
 ## 实施状态与优先级
 
@@ -13,13 +13,34 @@
 | 优先级 | 内容                                                          | 当前状态                                      |
 | ------ | ------------------------------------------------------------- | --------------------------------------------- |
 | P0     | Less/CSS Modules 构建基础；公共请求、时间、证券及采集依赖拆分 | 已完成；验证见[记录](history/verification.md) |
-| P1     | Quant 工作台/详情、研究共享表格；后端业务路由与冻结证据归属   | 待实施                                        |
+| P1     | Quant 工作台/详情、研究共享表格；后端业务路由与冻结证据归属   | 已完成；验证见[记录](history/verification.md) |
 | P2     | HTTP/查询缓存、响应契约、worker 进程监督与量化产物读取        | 待实施                                        |
 | P3     | 按实际需求拆 ORM、生成类型与迁移持久数据目录                  | 条件实施                                      |
 
 P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 index.less；后端 http/dependencies.py、shared/time.py、shared/securities.py、providers/base.py、providers/runner.py、providers/normalization.py。调用方和测试已经切换公共导入；表结构、API 路径与任务执行语义不变。
 
-下一步建议从 P1 的 Quant 页面开始：先把工作台和详情拆成独立目录，再拆导入、参数和结果展示。原因是同一文件目前承载多个变化独立的流程，而 P0 已提供可复用的样式构建能力。研究共享表格随后迁到 feature，消除 History 对 Research 页面的实现依赖。
+### P1 本批改造与原因
+
+| 已实施改造                                                                                                        | 为什么这样优化                                                                               |
+| ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `pages/Quant/`、`pages/QuantRun/` 分别懒加载；`features/quant/` 拆出工作台、导入、实验表单、审计和报告            | 数据导入、参数编辑和结果阅读独立变化，各自管理交互状态，页面不再同时承担两个路由的完整实现   |
+| Research、History 迁成目录入口，共用 `features/research/components/ResearchDataset/` 与 `SourceNotice/`           | 消除页面间实现依赖；修改研究表格或来源说明只需维护一处                                       |
+| 可视模块使用 `index.tsx + index.less`；共用布局通过 TS 导入原 Workbench CSS Module                                | 固定样式与模块同目录，同时避免复制整份布局规则或通过多处 CSS composition 产生重复构建样式    |
+| 路由按 market/model_settings/jobs/reports/research/portfolio 分组；main 统一装配                                  | 按业务直接找到接口与操作；旧主路由及 research_routes 已移除，HTTP 路径与响应保持兼容         |
+| 任务、持仓、模型配置写入锁与提交归 service；同步规则报告归 reports/service                                        | 完整操作从其他调用方使用时也有相同约束，不依赖路由帮忙加锁或提交；事件和业务写入保持同一事务 |
+| 研究拆成 collection/queries/history/evidence/demo/catalog/schemas；量化摘要归 quant/evidence，组合归 jobs/context | 研究模块不再读取量化 ORM，任务拥有跨领域编排；重试继续使用原提交证据                         |
+| 量化导入经 research/queries 的 archived_history 读取普通数据                                                      | 研究侧掌握来源选择，量化侧只负责转换与审计，避免双方深入对方存储实现                         |
+
+本批没有迁移数据库、checkpoint 或量化产物目录，没有调整研究/概率口径。根 schemas.py 暂保留现有共享响应契约，worker 监督与 quant/data.py 的产物拆分留在 P2；Dashboard、Portfolio、ModelSettings 和 Agent 展示组件尚未批量改目录。
+
+### 接下来 P2 的顺序与理由
+
+1. **先整理 HTTP、领域请求和查询缓存。** 从 api/client.ts 独立 request，再按领域集中 query key 与失效规则；保留 cookie、超时、SSE 和既有 key 形状。原因：P1 已把模块拆开，跨页面刷新规则仍分散，容易出现操作成功而其他视图仍显示旧值。
+2. **核对响应契约与缺失语义。** 在实际 API 消费点补齐 schema 和前端类型；先维护明确契约，再决定是否值得自动生成类型。原因：重构后调用路径更清楚，但时间、来源和 unknown/null 的含义仍需跨端一致。
+3. **抽取 worker 进程监督。** 先覆盖退出、超时、取消与回收，再合并重复运行管理。原因：这部分直接影响故障恢复，不能只把相似代码搬到基类。
+4. **独立量化产物接口。** 集中路径、哈希核验和分页读取，保留当前文件布局。原因：训练、下载与查询应共用完整性规则，避免各自解释产物细节。
+
+以下原始问题与现状段落保留评估时上下文；链接已指向迁移后的归属，当前入口以本节与源码导航为准。
 
 ## 1. 总体判断
 
@@ -31,14 +52,14 @@ P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 ind
 
 ### 1.1 保留的设计及理由
 
-| 现有设计                           | 判断与理由                                                                                          | 依据                                                                              |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| 前后端同仓、分别管理依赖           | 适合单人跨端开发；保留 pnpm、uv 和各自锁文件，无需引入多仓或新的构建编排框架                        | [根配置](../package.json)、[后端配置](../apps/api/pyproject.toml)                 |
-| API 与独立 worker                  | 慢任务与 HTTP 生命周期分离已经存在，继续在此基础上维护取消、超时和恢复                              | [应用入口](../apps/api/app/main.py)、[worker](../apps/api/app/worker.py)          |
-| 不可变快照、配置版本和量化数据版本 | 是研究可追溯性的基础，目录调整不得改变这些业务语义                                                  | [数据库模型](../apps/api/app/db.py)、[任务创建](../apps/api/app/services/jobs.py) |
-| 量化按功能聚合，计算与执行分离     | `quant/` 已有 routes、schemas、data、service、engine、backtest 等分工，可作为其他模块渐进聚合的参考 | [量化目录](../apps/api/app/quant/)                                                |
-| SQLAlchemy 直接查询                | 当前规模无需通用 Repository / BaseService；应优先解决已有职责混杂，避免新增纯转发层                 | [现有架构约定](architecture/overview.md)                                          |
-| docs 按用途分类，AGENTS 按任务导航 | 当前功能、学习、规范和历史分开，整体合理；只需补齐计划入口及随迁移更新事实                          | [文档总索引](README.md)、[Agent 入口](../AGENTS.md)                               |
+| 现有设计                           | 判断与理由                                                                                          | 依据                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 前后端同仓、分别管理依赖           | 适合单人跨端开发；保留 pnpm、uv 和各自锁文件，无需引入多仓或新的构建编排框架                        | [根配置](../package.json)、[后端配置](../apps/api/pyproject.toml)                |
+| API 与独立 worker                  | 慢任务与 HTTP 生命周期分离已经存在，继续在此基础上维护取消、超时和恢复                              | [应用入口](../apps/api/app/main.py)、[worker](../apps/api/app/worker.py)         |
+| 不可变快照、配置版本和量化数据版本 | 是研究可追溯性的基础，目录调整不得改变这些业务语义                                                  | [数据库模型](../apps/api/app/db.py)、[任务创建](../apps/api/app/jobs/service.py) |
+| 量化按功能聚合，计算与执行分离     | `quant/` 已有 routes、schemas、data、service、engine、backtest 等分工，可作为其他模块渐进聚合的参考 | [量化目录](../apps/api/app/quant/)                                               |
+| SQLAlchemy 直接查询                | 当前规模无需通用 Repository / BaseService；应优先解决已有职责混杂，避免新增纯转发层                 | [现有架构约定](architecture/overview.md)                                         |
+| docs 按用途分类，AGENTS 按任务导航 | 当前功能、学习、规范和历史分开，整体合理；只需补齐计划入口及随迁移更新事实                          | [文档总索引](README.md)、[Agent 入口](../AGENTS.md)                              |
 
 ### 1.2 已确认的主要结构问题
 
@@ -66,7 +87,7 @@ P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 ind
 
 ### 3.1 A / P0：独立公共依赖（已实施）
 
-**现状。** 除 `SessionDep` 放在 `routes.py` 外，[research_schemas.py](../apps/api/app/research_schemas.py)、[quant/data.py](../apps/api/app/quant/data.py) 等还从 [providers/public.py](../apps/api/app/providers/public.py) 导入 `SHANGHAI`、`normalize_symbol`；研究 provider 从该文件导入 `ProviderError`、`run_collector`。一个具体行情适配文件同时承载了通用规则和子进程执行。
+**现状。** 除 `SessionDep` 放在 `routes.py` 外，[research_schemas.py](../apps/api/app/research/schemas.py)、[quant/data.py](../apps/api/app/quant/data.py) 等还从 [providers/public.py](../apps/api/app/providers/public.py) 导入 `SHANGHAI`、`normalize_symbol`；研究 provider 从该文件导入 `ProviderError`、`run_collector`。一个具体行情适配文件同时承载了通用规则和子进程执行。
 
 **方案。**
 
@@ -79,9 +100,9 @@ P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 ind
 
 **完成标准。** 其他路由不再从主业务路由导入 `SessionDep`；通用证券与时间规则不依赖 `providers.public`；既有证券格式、未知时间、异常码及测试替换点保持一致。移动函数后检查 monkeypatch 的目标路径，不只检查生产 import。
 
-### 3.2 A：按功能收拢路由，明确事务由谁提交
+### 3.2 A / P1：按功能收拢路由，明确事务由谁提交（已实施）
 
-**现状。** [routes.py](../apps/api/app/routes.py) 横跨多个领域；`create_analysis` 在路由内执行图、构造报告并提交事务，`cancel_job` 在路由内修改任务与事件。[research_routes.py](../apps/api/app/research_routes.py) 同时处理研究查询和持仓增删改。与此同时，`services/jobs.py` 已承担创建、重试和领取，职责不是完全缺失，而是尚未收齐。
+**现状。** [routes.py](../apps/api/app/jobs/routes.py) 横跨多个领域；`create_analysis` 在路由内执行图、构造报告并提交事务，`cancel_job` 在路由内修改任务与事件。[research_routes.py](../apps/api/app/research/routes.py) 同时处理研究查询和持仓增删改。与此同时，`services/jobs.py` 已承担创建、重试和领取，职责不是完全缺失，而是尚未收齐。
 
 **方案。**
 
@@ -94,9 +115,9 @@ P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 ind
 
 **完成标准。** API 路径和行为不变；路由不再自行编排多步业务写入；失败路径不会留下半份业务结果。异步成功报告、任务成功状态及成功事件继续在同一事务提交，参考 [run_job.py](../apps/api/app/agents/run_job.py) 当前实现。
 
-### 3.3 A：拆开研究数据职责，把跨领域证据组装放到任务侧
+### 3.3 A / P1：拆开研究数据职责，把跨领域证据组装放到任务侧（已实施）
 
-**现状。** [research_data.py](../apps/api/app/services/research_data.py) 同时处理请求去重、采集执行、快照查询、资金派生、历史窗口统计、演示初始化、调度和冻结证据。`frozen_context` 直接 join `QuantRun` 与 `QuantDataset` 并解释实验报告字段；研究资料模块因此知道量化存储细节。
+**现状。** [research_data.py](../apps/api/app/research/collection.py) 同时处理请求去重、采集执行、快照查询、资金派生、历史窗口统计、演示初始化、调度和冻结证据。`frozen_context` 直接 join `QuantRun` 与 `QuantDataset` 并解释实验报告字段；研究资料模块因此知道量化存储细节。
 
 **方案。** 按现有函数群迁移，避免为每个函数建文件：
 
@@ -115,9 +136,9 @@ P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 ind
 
 **完成标准。** 研究模块不再直接读取量化 ORM；量化转换历史数据通过研究侧明确的读取接口获得输入；任务执行和重试仍使用提交时冻结的 context，不重新读取最新数据。保留缺失证据、目标证券席位、个股行情日期及持仓 opt-in 的回归验证。
 
-### 3.4 A：先拆前端量化页面，再解决页面之间的依赖
+### 3.4 A / P1：先拆前端量化页面，再解决页面之间的依赖（本批已实施）
 
-**现状。** [Quant.tsx](../apps/web/src/pages/Quant.tsx) 包含数据版本选择、CSV 预览导入、实验表单、列表、指标、回测结果及逐笔预测；两个路由页面共用同一源文件。另有 [History.tsx](../apps/web/src/pages/History.tsx) 直接从 `./Research` 导入 `ResearchDataset`，页面成为另一个页面的组件库。
+**现状。** [Quant.tsx](../apps/web/src/pages/Quant/index.tsx) 包含数据版本选择、CSV 预览导入、实验表单、列表、指标、回测结果及逐笔预测；两个路由页面共用同一源文件。另有 [History.tsx](../apps/web/src/pages/History/index.tsx) 直接从 `./Research` 导入 `ResearchDataset`，页面成为另一个页面的组件库。
 
 **方案。**
 
@@ -406,7 +427,7 @@ apps/web/src/
 
 - 初期每批只改代码归属和调用方式，不改 HTTP 路径、表结构、任务 ID、事件 ID、checkpoint thread_id、数据模式或产物目录。若确需改协议或数据结构，另作显式迁移。
 - 记录旧到新路径及所有调用方，兼容导出只存在于过渡期；每批结束检查是否留下第二份实现、循环导入或失效测试替换点。
-- 有版本控制时按可独立回退的批次提交；当前副本没有 Git 元数据，实际实施前需建立可恢复的代码基线或备份，不能把本文当成已有提交。
+- 有版本控制时按可独立回退的批次提交；初稿与 P0 时没有 Git 元数据，P1 时已具备 Git，并另外保存本批源码备份。当前改动尚未提交，不能把本文当成已有提交。
 - 涉及持久数据时同时保护业务库、checkpoint 和量化产物；回滚代码并不能撤销已修改的表结构或文件布局。应先在临时数据副本演练，再处理用户数据。
 - 不为了清理目录删除仍被任务或报告引用的快照与产物；出现失败先回退本批修改，避免叠加下一批扩大排查范围。
 

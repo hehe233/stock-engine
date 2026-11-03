@@ -93,8 +93,10 @@ Parquet 文件保存日线和样本外预测；DuckDB 使用参数绑定读取�
 | GET `/runs/{id}/artifacts/models.json`          | 各折模型文本与校准系数              |
 | GET `/runs/{id}/artifacts/predictions.parquet`  | 全部样本外预测                      |
 
-阅读：`pages/Quant.tsx` → `api/quant.ts` → `quant/routes.py` → `quant/data.py` → `quant/features.py` → `quant/engine.py` → `quant/backtest.py` → `quant/service.py` 与 `worker.py`。防泄漏、撮合和端到端回归在 `tests/test_quant.py` 与 `e2e/quant.spec.ts`。
+阅读：`pages/Quant/index.tsx` / `pages/QuantRun/index.tsx` → `features/quant/` → `api/quant.ts` → `quant/routes.py` → `quant/data.py` → `quant/features.py` → `quant/engine.py` → `quant/backtest.py` → `quant/service.py` 与 `worker.py`。防泄漏、撮合和端到端回归在 `tests/test_quant.py` 与 `e2e/quant.spec.ts`。
 
 ## 尚未完成的生产能力
 
 全市场历史证券成分/退市覆盖核验、时点数据版本修订、完整公司行动收益处理、独立最终盲测、概率上线门槛与持续漂移监测、完整撮合账本、Level-2 授权接入和实盘执行。当前完成的是可运行、可审计的 P3 研究验证版，不以免费精选数据宣称上述能力已经完成。
+
+任务证据通过 `quant/evidence.py` 读取符合证券、模式和截止时点的实验摘要，再由 `jobs/context.py` 组合。归档历史导入通过 `research/queries.py` 读取；量化模块不直接读取 ResearchSnapshot。

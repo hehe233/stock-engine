@@ -2,7 +2,7 @@
 
 import json
 
-from app.research_catalog import history_case
+from app.research.catalog import history_case
 
 
 def collect_research(query):

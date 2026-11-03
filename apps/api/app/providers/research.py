@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 from app.providers.base import ProviderError
 from app.providers.normalization import number
 from app.providers.runner import run_collector
-from app.research_catalog import history_case
+from app.research.catalog import history_case
 from app.shared.securities import normalize_symbol
 
 NOTES = {

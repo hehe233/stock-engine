@@ -7,10 +7,9 @@ from sqlalchemy import func, select, update
 
 from app.core.config import Settings
 from app.db import JobEvent, MarketSnapshot, ResearchJob
+from app.jobs.context import frozen_context
+from app.model_settings.service import effective_settings, snapshot_configuration
 from app.schemas import AnalysisRequest, EventResponse, JobResponse, Quote
-from app.services.model_settings import effective_settings, snapshot_configuration
-from app.services.portfolio import portfolio_view
-from app.services.research_data import frozen_context
 from app.shared.time import SHANGHAI, as_utc, utc_now
 
 TERMINAL = {"succeeded", "failed", "cancelled"}
@@ -56,67 +55,68 @@ def ensure_queue_capacity(session, settings: Settings):
 
 
 def create_job(session, payload: AnalysisRequest, settings: Settings) -> JobResponse:
-    settings = effective_settings(session, settings)
-    snapshot = session.get(MarketSnapshot, payload.snapshot_id)
-    if snapshot is None or not any(q["symbol"] == payload.symbol for q in snapshot.quotes):
-        raise HTTPException(404, "股票或行情快照不存在，请刷新行情后重试")
-    model_name = None
-    if payload.mode == "api":
-        model_name = payload.model_name or settings.llm_model
-        if not settings.llm_api_key or model_name not in settings.api_models:
-            raise HTTPException(409, "请在顶部导航的模型设置中配置 API 地址、密钥和可选模型")
-    elif payload.mode == "ollama":
-        model_name = payload.model_name or settings.ollama_model
-        if model_name != settings.ollama_model:
-            raise HTTPException(422, "Ollama 模型不在配置列表中")
-    ensure_queue_capacity(session, settings)
-    target_quote = Quote.model_validate(
-        next(q for q in snapshot.quotes if q["symbol"] == payload.symbol)
-    )
-    evidence_day = (
-        as_utc(target_quote.quote_time or snapshot.fetched_at).astimezone(SHANGHAI).date()
-    )
-    context = frozen_context(
-        session,
-        payload.symbol,
-        settings.market_provider,
-        utc_now(),
-        evidence_day,
-    )
-    if payload.include_portfolio:
-        context["portfolio"] = portfolio_view(
-            session, settings.market_provider, payload.symbol, snapshot
+    """Own queue admission and commit the job, configuration and initial event together."""
+    with queue_admission:
+        settings = effective_settings(session, settings)
+        snapshot = session.get(MarketSnapshot, payload.snapshot_id)
+        if snapshot is None or not any(q["symbol"] == payload.symbol for q in snapshot.quotes):
+            raise HTTPException(404, "股票或行情快照不存在，请刷新行情后重试")
+        model_name = None
+        if payload.mode == "api":
+            model_name = payload.model_name or settings.llm_model
+            if not settings.llm_api_key or model_name not in settings.api_models:
+                raise HTTPException(409, "请在顶部导航的模型设置中配置 API 地址、密钥和可选模型")
+        elif payload.mode == "ollama":
+            model_name = payload.model_name or settings.ollama_model
+            if model_name != settings.ollama_model:
+                raise HTTPException(422, "Ollama 模型不在配置列表中")
+        ensure_queue_capacity(session, settings)
+        target_quote = Quote.model_validate(
+            next(q for q in snapshot.quotes if q["symbol"] == payload.symbol)
         )
-    job = ResearchJob(
-        id=str(uuid4()),
-        snapshot_id=snapshot.id,
-        symbol=payload.symbol,
-        mode=payload.mode,
-        model_name=model_name,
-        context=context,
-        model_config_id=(
-            snapshot_configuration(session, settings).id if payload.mode != "rules" else None
-        ),
-    )
-    session.add(job)
-    session.flush()
-    event(session, job.id, "queued", message="任务已入库，等待 worker 执行")
-    session.commit()
-    return serialize_job(job)
+        evidence_day = (
+            as_utc(target_quote.quote_time or snapshot.fetched_at).astimezone(SHANGHAI).date()
+        )
+        context = frozen_context(
+            session,
+            payload.symbol,
+            settings.market_provider,
+            utc_now(),
+            evidence_day,
+            portfolio_snapshot=snapshot if payload.include_portfolio else None,
+        )
+        job = ResearchJob(
+            id=str(uuid4()),
+            snapshot_id=snapshot.id,
+            symbol=payload.symbol,
+            mode=payload.mode,
+            model_name=model_name,
+            context=context,
+            model_config_id=(
+                snapshot_configuration(session, settings).id if payload.mode != "rules" else None
+            ),
+        )
+        session.add(job)
+        session.flush()
+        event(session, job.id, "queued", message="任务已入库，等待 worker 执行")
+        session.commit()
+        return serialize_job(job)
 
 
 def retry_failed_job(session, job_id: str, settings: Settings) -> JobResponse:
-    job = session.get(ResearchJob, job_id)
-    if job is None:
-        raise HTTPException(404, "任务不存在")
-    if job.status != "failed" or job.attempts >= settings.job_max_attempts:
-        raise HTTPException(409, "只有未达到重试次数上限的失败任务可以恢复")
-    ensure_queue_capacity(session, settings)
-    job.status, job.error, job.updated_at = "queued", None, utc_now()
-    job.lease_owner, job.lease_until = None, None
-    event(session, job.id, "queued", message="已请求从检查点恢复，模型调用可能产生新费用")
-    session.commit()
-    return serialize_job(job)
+    """Commit a retry without rebuilding the original context or configuration."""
+    with queue_admission:
+        job = session.get(ResearchJob, job_id)
+        if job is None:
+            raise HTTPException(404, "任务不存在")
+        if job.status != "failed" or job.attempts >= settings.job_max_attempts:
+            raise HTTPException(409, "只有未达到重试次数上限的失败任务可以恢复")
+        ensure_queue_capacity(session, settings)
+        job.status, job.error, job.updated_at = "queued", None, utc_now()
+        job.lease_owner, job.lease_until = None, None
+        event(session, job.id, "queued", message="已请求从检查点恢复，模型调用可能产生新费用")
+        session.commit()
+        return serialize_job(job)
 
 
 def claim_job(sessions, settings: Settings) -> tuple[str, str] | None:
@@ -177,3 +177,16 @@ def recover_expired_jobs(sessions, max_attempts: int):
             job.updated_at, job.lease_owner, job.lease_until = utc_now(), None, None
             event(session, job.id, job.status, message=job.error)
         session.commit()
+
+
+def cancel_requested_job(session, job_id: str) -> JobResponse:
+    job = session.get(ResearchJob, job_id)
+    if job is None:
+        raise HTTPException(404, "任务不存在")
+    if job.status not in TERMINAL:
+        job.cancel_requested, job.updated_at = True, utc_now()
+        if job.status == "queued":
+            job.status = "cancelled"
+        event(session, job.id, "cancel_requested", message="取消请求已记录")
+        session.commit()
+    return serialize_job(job)

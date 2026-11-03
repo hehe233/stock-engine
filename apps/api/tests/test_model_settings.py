@@ -5,9 +5,9 @@ from langchain_core.messages import AIMessage
 
 from app.agents.run_job import execute_job
 from app.db import ModelConfiguration, ResearchJob
+from app.jobs.service import claim_job
 from app.main import create_app
-from app.services.jobs import claim_job
-from app.services.model_settings import apply_configuration
+from app.model_settings.service import apply_configuration
 from tests.test_p1 import FakeModel
 
 
@@ -132,7 +132,7 @@ def test_invalid_settings_never_echo_input_or_change_config(client):
 
 
 def test_connection_probe_uses_draft_without_saving_and_masks_errors(client, monkeypatch):
-    from app.services import model_settings
+    from app.model_settings import service as model_settings
 
     class ProbeModel:
         def bind_tools(self, tools, tool_choice):

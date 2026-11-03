@@ -1,97 +1,20 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Input, Table, Tabs, Tag } from 'antd';
+import { Alert, Button, Input, Table, Tag } from 'antd';
 import type { TableColumnsType } from 'antd';
-import { researchApi, shanghaiToday } from '../api/research';
-import type { ResearchKind, ResearchQuery, ResearchRow, ResearchSnapshot } from '../api/research';
-import { ErrorNotice } from '../components/ErrorNotice';
-import { formatAmount, formatTime } from '../lib/format';
-import styles from '../styles/Workbench.module.css';
+import { researchApi } from '../../../../api/research';
+import type { ResearchQuery, ResearchRow } from '../../../../api/research';
+import { ErrorNotice } from '../../../../components/ErrorNotice';
+import { formatAmount, formatTime } from '../../../../lib/format';
 
-const titles = {
-  ladder: '连板梯队',
-  dragon: '龙虎榜',
-  flow: '资金流向',
-  notices: '公告证据',
-  seats: '营业部明细',
-  history: '历史日线',
-};
+import { titles } from '../../titles';
+import { SourceNotice } from '../SourceNotice';
+
+import layout from '../../../../styles/Workbench.module.css';
+import styles from './index.less';
+
 const amount = (value?: number | null) => formatAmount(value ?? null);
 const display = (value?: string | number | null) => value ?? '未提供';
-export function SourceNotice({ snapshot }: { snapshot: ResearchSnapshot }) {
-  return (
-    <div style={{ padding: 16 }}>
-      <Tag color={snapshot.is_demo ? 'orange' : 'blue'}>
-        {snapshot.is_demo ? '虚构演示数据' : snapshot.source}
-      </Tag>
-      <span>
-        请求日期 {snapshot.query_date} · 源日期 {snapshot.data_date ?? '未提供'} · 采集{' '}
-        {formatTime(snapshot.observed_at)}
-      </span>
-      <p>
-        来源返回 {snapshot.total} 条 · 异常拒绝 {snapshot.details.rejected_count} 条 ·
-        完整覆盖未核验 · 精确披露时间未知
-      </p>
-      {snapshot.details.warnings.map((w) => (
-        <p key={w}>{w}</p>
-      ))}
-      {snapshot.stale && (
-        <Alert type="warning" title="这是超过两个采集周期的历史快照，请核对日期后使用。" />
-      )}
-    </div>
-  );
-}
-
-export function ResearchPage() {
-  const [kind, setKind] = useState<ResearchKind>('ladder');
-  const [day, setDay] = useState(shanghaiToday);
-  return (
-    <div className={styles.pageStack}>
-      <div className={styles.pageHeading}>
-        <div>
-          <div className={styles.eyebrow}>RESEARCH CENTER</div>
-          <h1>短线研究中心</h1>
-          <p>连板、行业、龙虎榜、资金和公告 · 独立证据批次 · 五分钟尝试更新</p>
-        </div>
-      </div>
-      <Alert
-        type="info"
-        showIcon
-        title="不同数据有不同披露时间"
-        description="龙虎榜为盘后资料；资金排名只有当前观测。涨停池覆盖不完整，不能把未收录解释为未涨停。席位名称不能识别具体游资个人。"
-      />
-      <div className={styles.toolbar}>
-        <label>
-          研究日期{' '}
-          <Input
-            type="date"
-            aria-label="研究日期"
-            value={day}
-            max={shanghaiToday()}
-            disabled={kind === 'flow'}
-            onChange={(e) => {
-              if (e.target.value) setDay(e.target.value);
-            }}
-          />
-        </label>
-        {kind === 'flow' && <span>资金流向固定读取当前快照，源交易日期未知。</span>}
-      </div>
-      <Tabs
-        activeKey={kind}
-        onChange={(value) => setKind(value as ResearchKind)}
-        items={(['ladder', 'dragon', 'flow', 'notices'] as const).map((key) => ({
-          key,
-          label: titles[key],
-        }))}
-      />
-      <ResearchDataset
-        key={kind + day}
-        query={{ kind, date: kind === 'flow' ? shanghaiToday() : day }}
-      />
-    </div>
-  );
-}
-
 export function ResearchDataset({ query }: { query: ResearchQuery }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -209,9 +132,9 @@ export function ResearchDataset({ query }: { query: ResearchQuery }) {
               ];
   const snapshot = data.data?.snapshot;
   return (
-    <div className={styles.pageStack}>
-      <section className={styles.panel}>
-        <div className={styles.panelHeading}>
+    <div className={layout.pageStack}>
+      <section className={layout.panel}>
+        <div className={layout.panelHeading}>
           <h2>
             {titles[query.kind]}
             {query.symbol ? ` · ${query.symbol}` : ''}
@@ -220,7 +143,7 @@ export function ResearchDataset({ query }: { query: ResearchQuery }) {
             采集 / 更新{pending ? '（排队执行）' : ''}
           </Button>
         </div>
-        <div style={{ padding: 16 }}>
+        <div className={styles.inset}>
           <Input
             aria-label="搜索研究数据"
             placeholder="搜索代码、名称或证据文字"
@@ -252,7 +175,7 @@ export function ResearchDataset({ query }: { query: ResearchQuery }) {
           />
         )}
         {query.kind === 'ladder' && data.data?.summary.tiers && (
-          <div style={{ padding: 16 }}>
+          <div className={styles.inset}>
             {data.data.summary.tiers.map((t) => (
               <Tag key={t.boards} color="blue">
                 {t.boards} 板 · {t.count} 只
@@ -284,7 +207,7 @@ export function ResearchDataset({ query }: { query: ResearchQuery }) {
           </div>
         )}
         {query.kind === 'flow' && (
-          <div style={{ padding: 16 }}>
+          <div className={styles.inset}>
             上一观测：{formatTime(data.data?.summary.previous_observed_at ?? null)}
             。差额仅为同源累计统计的观测变化，源日期未知时不能认定为盘中真实新增资金；无上批时保持未知。
           </div>

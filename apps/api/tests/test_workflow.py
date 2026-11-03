@@ -9,8 +9,8 @@ from sqlalchemy import func, select
 from app.agents.research import build_research_graph
 from app.db import AnalysisRun, MarketSnapshot
 from app.main import create_app
+from app.market.service import MarketService
 from app.providers.base import QuoteBatch
-from app.services.market import MarketService
 from app.shared.time import utc_now
 
 

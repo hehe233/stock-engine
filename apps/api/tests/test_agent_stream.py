@@ -9,7 +9,7 @@ from sqlalchemy import select
 from app.agents.models import ChatOpenAI
 from app.agents.run_job import execute_job
 from app.db import JobEvent
-from app.services.jobs import claim_job, finish_failed
+from app.jobs.service import claim_job, finish_failed
 
 
 def make_stream_model(*, bad_reference=False, disconnect=False):

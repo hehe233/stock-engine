@@ -2,6 +2,19 @@
 
 [返回历史索引](README.md)
 
+## 重构 P1：业务模块、事务与冻结证据（2026-11-03）
+
+- 前端将 Quant/QuantRun、Research/History 迁为目录页面；量化拆出 QuantWorkspace、DatasetImportPanel、ExperimentForm、DatasetAudit、QuantRunReport 与 BacktestReport，研究共享 ResearchDataset 与 SourceNotice。可视模块采用 `index.tsx + index.less`，共同布局继续导入 Workbench CSS Module。Quant 两个路由分别懒加载；页面不再互相导入实现。
+- 后端按 market/model_settings/jobs/reports/research/portfolio 分组，系统接口归 http/system；调用方和测试全部切换，移除旧路由、服务与研究契约文件。任务、持仓、配置锁与提交归 service，规则报告保存归 reports/service。研究采集/查询/历史/证据分开；jobs/context 组合研究、量化和显式持仓，quant/data 经研究查询接口读取历史普通数据。
+- 在 `apps/api` 执行 `uv run pytest -q`：**94 passed，39.29 秒**。包含新增 6 个提交失败原子性场景和 1 个重试冻结证据场景，使用临时数据库与模拟模型；首轮发现 2 个模型配置测试保留旧模块导入，修正后全量通过。最终 Ruff 检查通过。
+- 根目录 `pnpm typecheck`、本次源码与 E2E 文件 ESLint 通过；Ant Design CLI 对 features 和四个迁移页面检查均为 **0 issues**。CLI/ESLint 在沙箱内遇到依赖软链接读取拒绝，在获准的当前用户环境完成检查；依赖版本和锁文件未改动。
+- `scripts/build-web.ps1` 最终 **退出码 0**，Vite 生产构建通过。工作台和详情分别生成约 8.21/8.82 kB 的 JS 入口，共享格式文件约 0.86 kB；局部 CSS 约 0.23/0.27 kB，共用 CSS 约 29.48 kB。主 JS 仍约 1,358.38 kB，存在大 chunk 提示；未做加载耗时对比，不宣称整体性能提升。
+- 使用 `scripts/start-dev.ps1 -Demo` 启动隔离演示环境；`pnpm --filter @stock-engine/web exec playwright test e2e/quant.spec.ts e2e/p2.spec.ts e2e/refactor-p1.spec.ts e2e/workbench.spec.ts e2e/agent-stream.spec.ts e2e/model-profiles.spec.ts --timeout=120000`：**18 passed，2.1 分钟**。覆盖合成数据训练/报告/产物、CSV 超限与预览失效、导入后选择、取消刷新、研究失败重试、研究和历史表格、持仓条件、模型配置、SSE 与行情工作台。移动端直达/重载与无横向溢出通过；已查看量化和研究截图，产物在 `.runtime/p1-*-mobile.png`。
+- 与本批备份比较，**43 个路径的完整 OpenAPI 文档一致**；19 个原有研究/行情/日历声明 AST 一致。新增跨领域组合与事务锁移动由行为测试验证。备份位于 `.runtime/p1-before-20261103-160100/`，差异清单与契约快照位于 `.runtime/p1-changes.json`、`p1-openapi-before.json`、`p1-openapi-after.json`。文档已同步源码导航、模块入口与 P2 顺序。
+- 本轮仓库已有 Git；在当前用户环境完成 `git status --short`、`git diff`、`git diff --check`，未发现差异空白错误。没有提交或暂存改动；新增文件另经类型、lint、构建和备份清单核对，避免只看 Git 已跟踪文件。
+- 开始前发现旧 PID 清单，核实三个登记进程均不存在后归档清单；结束后通过 `scripts/stop-dev.ps1` 关闭本次 API、worker、web 进程树，8001/5173 已释放。8000 的 PID 11236 于本次工作期间另行启动，不在本次清单内，保留未终止。
+- 未调用真实行情源或付费模型，未迁移用户业务数据库、checkpoint 或产物目录；未运行 PostgreSQL 集成与完整浏览器套件。Less 编译适配没有修改，本次验证实际迁移页面和生产构建，未重复执行 P0 的隔离 HMR 测试。
+
 ## 重构 P0：公共依赖与目录组件基础（2026-11-03）
 
 - 后端抽出 http/dependencies.py 的 SessionDep；shared/time.py 的 UTC、上海时区约定；shared/securities.py 的证券代码规则；providers/base.py、runner.py、normalization.py 分别承载采集错误、进程执行和源字段标准化。调用方及原有测试导入同步调整。与改动前备份做 AST 对比，抽出的函数/类及未移动业务函数保持一致，无表结构或迁移修改。

@@ -43,6 +43,13 @@ test('P3 CSV preview reports missing execution fields before immutable import', 
   await page.goto('/quant');
   await page.getByLabel('数据集名称', { exact: true }).fill('CSV 浏览器审计');
   await page.getByLabel('数据来源说明', { exact: true }).fill('自动化测试，非市场数据');
+  await page.getByLabel('量化日线 CSV').setInputFiles({
+    name: 'oversized.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.alloc(20000001),
+  });
+  await expect(page.getByText('CSV 最多 20 MB、100000 行', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '校验并预览', exact: true })).toBeDisabled();
   const lines = ['symbol,date,open,high,low,close'];
   for (let i = 0; i < 40; i++) {
     const date = new Date(Date.UTC(2024, 0, 1 + i)).toISOString().slice(0, 10);
@@ -55,6 +62,10 @@ test('P3 CSV preview reports missing execution fields before immutable import', 
   });
   await page.getByRole('button', { name: '校验并预览', exact: true }).click();
   await expect(page.getByText('成交所需字段完整：0 行；缺精确可见时间：40 行。')).toBeVisible();
+  await page.getByLabel('数据来源说明', { exact: true }).fill('已修改的来源说明');
+  await expect(page.getByRole('button', { name: '确认保存数据版本', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '校验并预览', exact: true }).click();
+  await expect(page.getByRole('button', { name: '确认保存数据版本', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '确认保存数据版本', exact: true }).click();
   await expect(page.getByTitle(/CSV 浏览器审计/)).toBeVisible();
   await expect(page.getByRole('button', { name: '确认保存数据版本', exact: true })).toHaveCount(0);

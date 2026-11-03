@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Table, Tag } from 'antd';
 import type { TableColumnsType } from 'antd';
-import { researchApi } from '../api/research';
-import type { HistoryCase, WindowStats } from '../api/research';
-import { ResearchDataset } from './Research';
-import { ErrorNotice } from '../components/ErrorNotice';
-import styles from '../styles/Workbench.module.css';
+import { researchApi } from '../../api/research';
+import type { HistoryCase, WindowStats } from '../../api/research';
+import { ResearchDataset } from '../../features/research/components/ResearchDataset';
+import { ErrorNotice } from '../../components/ErrorNotice';
+
+import layout from '../../styles/Workbench.module.css';
+import styles from './index.less';
 
 function WindowCell({ value }: { value: WindowStats | null | undefined }) {
   if (!value) return <span>暂无符合条件的窗口</span>;
@@ -109,10 +111,10 @@ export function HistoryPage() {
   const items = history.data?.items ?? [];
   const ready = items.filter((r) => r.statistics);
   return (
-    <div className={styles.pageStack}>
-      <div className={styles.pageHeading}>
+    <div className={`${layout.pageStack} ${styles.root}`}>
+      <div className={layout.pageHeading}>
         <div>
-          <div className={styles.eyebrow}>HISTORICAL CASES</div>
+          <div className={layout.eyebrow}>HISTORICAL CASES</div>
           <h1>近十年历史案例</h1>
           <p>2016—2025 十个完整年度 · 人工观察目录 · 同期强势与失败窗口对照</p>
         </div>
@@ -135,7 +137,7 @@ export function HistoryPage() {
       {collect.isSuccess && (
         <Alert type="info" title="采集请求已入队，后台逐个执行；失败原因会显示在对应行。" />
       )}
-      <section className={styles.panel}>
+      <section className={layout.panel}>
         <Table
           rowKey="id"
           columns={columns}
@@ -144,7 +146,7 @@ export function HistoryPage() {
           scroll={{ x: 1200 }}
         />
       </section>
-      <section className={`${styles.panel} ${styles.scopePanel}`}>
+      <section className={`${layout.panel} ${layout.scopePanel}`}>
         <h2>本库可观察到的规律与边界</h2>
         <p>
           已有日线的年度：{ready.length} / 10；出现负收益 20 日窗口的年度：

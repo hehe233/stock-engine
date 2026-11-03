@@ -121,7 +121,8 @@ stock-engine/
 │   │   ├── src/
 │   │   │   ├── api/              # HTTP 请求及前后端契约
 │   │   │   ├── components/       # 复用界面组件
-│   │   │   ├── pages/            # 行情、任务进度、分析记录、报告、路线图
+│   │   │   ├── pages/            # 路由页面；Quant/QuantRun/Research/History 已采用目录入口
+│   │   │   ├── features/         # 量化工作流与研究共享展示
 │   │   │   ├── lib/              # 时间、金额等纯函数
 │   │   │   └── styles/           # 全局基础样式与 CSS Modules
 │   │   └── e2e/                 # 浏览器端到端测试
@@ -129,11 +130,18 @@ stock-engine/
 │       ├── app/
 │       │   ├── core/config.py   # 环境变量与配置校验
 │       │   ├── providers/      # 行情适配器及演示样本
-│       │   ├── services/       # 采集、快照与事务协调
+│       │   ├── http/           # 系统接口、请求依赖
+│       │   ├── shared/         # 时间与证券通用规则
+│       │   ├── market/         # 行情路由、快照与日历
+│       │   ├── jobs/           # 任务生命周期、SSE 与冻结证据组合
+│       │   ├── reports/        # 报告查询与同步规则报告
+│       │   ├── research/       # 研究采集、查询、历史与证据
+│       │   ├── portfolio/      # 持仓契约、路由与完整写入操作
+│       │   ├── model_settings/ # 模型配置路由与版本管理
+│       │   ├── quant/          # 数据版本、训练、回测与实验摘要
 │       │   ├── agents/         # LangGraph 状态、节点和图
 │       │   ├── db.py           # 数据库连接与 ORM 模型
 │       │   ├── schemas.py      # 请求 / 响应数据契约
-│       │   ├── routes.py       # HTTP 接口
 │       │   ├── worker.py       # 后台采集、任务领取与子进程管理
 │       │   └── main.py         # API 生命周期，不执行慢速采集
 │       ├── migrations/        # Alembic 数据库迁移
@@ -147,7 +155,7 @@ stock-engine/
 
 ## 组件目录与样式
 
-新建或迁移的可视模块使用 PascalCase 目录，内部放置 index.tsx 与 index.less，保留命名导出。ErrorNotice 已完成首个迁移，存量 .module.css 按模块渐进替换。Vite 通过 apps/web/build/component-less.ts 将 src 内相对路径导入的 index.less 交给 Less/CSS Modules 管线；全局 CSS、主题和原有请求/状态管理继续复用。
+新建或迁移的可视模块使用 PascalCase 目录，内部放置 index.tsx 与 index.less，保留命名导出。ErrorNotice、Quant/QuantRun/Research/History 页面及量化与研究领域组件已迁移；固定局部样式放在 index.less，真正共用的布局继续复用 Workbench.module.css，其他存量页面按模块渐进替换。Vite 通过 apps/web/build/component-less.ts 将 src 内相对路径导入的 index.less 交给 Less/CSS Modules 管线；全局 CSS、主题和原有请求/状态管理继续复用。
 
 修改该编译规则后，在根目录执行 scripts/check-styles.ps1。它以隐藏进程使用随机本机端口验证样式隔离、热更新和生产提取；依赖现有 pnpm、Node 22.6+ 的类型剥离支持以及 Microsoft Edge，不启动业务 API。读取 .runtime/styles.exit-code（0 才算通过），详细输出在 styles.stdout.log / styles.stderr.log。测试临时源码自动清理，截图和产物保留在 .runtime/p0-less-*。
 
