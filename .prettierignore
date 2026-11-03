@@ -1,0 +1,11 @@
+node_modules
+.pnpm-store
+.runtime
+apps/api/.venv
+apps/api/.pytest_cache
+apps/api/.ruff_cache
+apps/api/uv.lock
+apps/web/dist
+apps/web/test-results
+apps/web/playwright-report
+pnpm-lock.yaml

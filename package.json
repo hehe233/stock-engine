@@ -1,0 +1,17 @@
+{
+  "name": "stock-engine",
+  "private": true,
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "dev:web": "pnpm --filter @stock-engine/web dev",
+    "build": "pnpm --filter @stock-engine/web build",
+    "typecheck": "pnpm --filter @stock-engine/web typecheck",
+    "lint": "pnpm --filter @stock-engine/web lint",
+    "test:e2e": "pnpm --filter @stock-engine/web test:e2e",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}

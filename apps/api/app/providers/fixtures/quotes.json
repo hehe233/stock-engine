@@ -1,0 +1,85 @@
+{
+  "as_of": "2026-10-30T15:00:00+08:00",
+  "quotes": [
+    {
+      "symbol": "DEMO001",
+      "name": "样本·算力一号",
+      "sector": "算力",
+      "price": 18.62,
+      "change_pct": 9.98,
+      "turnover_pct": 18.4,
+      "volume_ratio": 3.8,
+      "amount_yuan": 1280000000
+    },
+    {
+      "symbol": "DEMO002",
+      "name": "样本·机器人",
+      "sector": "机器人",
+      "price": 32.15,
+      "change_pct": 7.62,
+      "turnover_pct": 12.6,
+      "volume_ratio": 2.9,
+      "amount_yuan": 960000000
+    },
+    {
+      "symbol": "DEMO003",
+      "name": "样本·半导体",
+      "sector": "半导体",
+      "price": 46.8,
+      "change_pct": 5.31,
+      "turnover_pct": 9.3,
+      "volume_ratio": 2.3,
+      "amount_yuan": 720000000
+    },
+    {
+      "symbol": "DEMO004",
+      "name": "样本·新能源",
+      "sector": "新能源",
+      "price": 12.36,
+      "change_pct": -2.18,
+      "turnover_pct": 4.2,
+      "volume_ratio": 0.8,
+      "amount_yuan": 230000000
+    },
+    {
+      "symbol": "DEMO005",
+      "name": "样本·低空经济",
+      "sector": "低空经济",
+      "price": 25.9,
+      "change_pct": 8.46,
+      "turnover_pct": 23.5,
+      "volume_ratio": 4.6,
+      "amount_yuan": 1430000000
+    },
+    {
+      "symbol": "DEMO006",
+      "name": "样本·消费",
+      "sector": "消费",
+      "price": 8.73,
+      "change_pct": 1.52,
+      "turnover_pct": 2.1,
+      "volume_ratio": 1.2,
+      "amount_yuan": 87000000
+    },
+    {
+      "symbol": "DEMO007",
+      "name": "样本·医药",
+      "sector": "医药",
+      "price": 21.42,
+      "change_pct": -4.28,
+      "turnover_pct": 7.8,
+      "volume_ratio": 1.6,
+      "amount_yuan": 410000000
+    },
+    {
+      "symbol": "DEMO008",
+      "name": "样本·数据要素",
+      "sector": "数据要素",
+      "price": 15.64,
+      "change_pct": 6.18,
+      "turnover_pct": 15.2,
+      "volume_ratio": 3.1,
+      "amount_yuan": 830000000
+    }
+  ]
+}

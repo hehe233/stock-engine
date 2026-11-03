@@ -1,0 +1,42 @@
+import type { ThemeConfig } from 'antd';
+
+export const workspaceTheme: ThemeConfig = {
+  token: {
+    colorPrimary: '#006ee8',
+    colorInfo: '#006ee8',
+    colorSuccess: '#2d9b78',
+    colorWarning: '#cc9136',
+    colorError: '#d95454',
+    colorText: '#272b36',
+    colorTextSecondary: '#737989',
+    colorTextTertiary: '#989eac',
+    colorBorder: '#e4e7ee',
+    colorBorderSecondary: '#eceef4',
+    colorBgLayout: '#f7f8fc',
+    colorBgContainer: '#ffffff',
+    colorFillAlter: '#f7f8fc',
+    borderRadius: 8,
+    borderRadiusLG: 12,
+    fontSize: 13,
+    controlHeight: 34,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif",
+    motionDurationFast: '0.12s',
+    motionDurationMid: '0.2s',
+    motionDurationSlow: '0.24s',
+    motionEaseInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+  components: {
+    Table: {
+      headerBg: '#f7f8fc',
+      headerColor: '#737989',
+      rowHoverBg: '#f6f9ff',
+      borderColor: '#eef0f5',
+      cellPaddingBlockSM: 12,
+    },
+    Button: { primaryShadow: 'none', defaultShadow: 'none', fontWeight: 500 },
+    Tabs: { horizontalItemGutter: 26, inkBarColor: '#006ee8' },
+    Alert: { borderRadiusLG: 10 },
+    Tag: { defaultBg: '#f4f5f9', defaultColor: '#737989' },
+    Drawer: { footerPaddingBlock: 14 },
+  },
+};
