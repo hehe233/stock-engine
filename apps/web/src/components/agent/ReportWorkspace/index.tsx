@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode, type PointerEvent } from 'react';
 import { Button, Drawer } from 'antd';
 import { FileTextOutlined, RightOutlined } from '@ant-design/icons';
-import type { AnalysisReport, ReportPreview, ResearchJob } from '../../api/types';
-import { GeneratedReport } from './GeneratedReport';
-import { IconParkFont } from './IconParkFont';
-import styles from './ReportWorkspace.module.css';
+import type { AnalysisReport, ReportPreview, ResearchJob } from '../../../api/types';
+import { GeneratedReport } from '../GeneratedReport';
+import { IconParkFont } from '../IconParkFont';
+import styles from './index.less';
 
 const STORAGE_KEY = 'stock-engine-report-drawer-width';
 const MIN_WIDTH = 320;
@@ -139,7 +139,7 @@ export function ReportWorkspace({
           size="100%"
           destroyOnHidden
           closable={{ 'aria-label': '收起报告抽屉' }}
-          styles={{ body: { padding: 0, background: '#f7f8fc' } }}
+          classNames={{ body: styles.mobileBody }}
         >
           <div id="research-report-drawer">{document}</div>
         </Drawer>

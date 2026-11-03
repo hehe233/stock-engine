@@ -1,5 +1,6 @@
 import { Tag } from 'antd';
-import styles from '../styles/Workbench.module.css';
+import layout from '../../styles/Workbench.module.css';
+import styles from './index.less';
 
 const milestones = [
   {
@@ -55,18 +56,18 @@ const milestones = [
 
 export function Roadmap() {
   return (
-    <div className={styles.pageStack}>
-      <div className={styles.pageHeading}>
+    <div className={`${layout.pageStack} ${styles.root}`}>
+      <div className={layout.pageHeading}>
         <div>
-          <div className={styles.eyebrow}>PRODUCT ROADMAP</div>
+          <div className={layout.eyebrow}>PRODUCT ROADMAP</div>
           <h1>开发路线</h1>
           <p>先让数据与分析可靠流转，再逐步接入真实市场与模型能力。</p>
         </div>
       </div>
       <div className={styles.roadmapGrid}>
         {milestones.map((item) => (
-          <section className={styles.panel} key={item.phase}>
-            <div className={styles.panelHeading}>
+          <section className={layout.panel} key={item.phase}>
+            <div className={layout.panelHeading}>
               <h2>
                 {item.phase} · {item.title}
               </h2>

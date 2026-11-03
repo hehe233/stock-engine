@@ -27,7 +27,7 @@
 
 | 职责                 | 入口                                                                                                                              |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| 行情、任务与报告页面 | `apps/web/src/pages/Dashboard.tsx`、`Jobs.tsx`、`Reports.tsx`                                                                     |
+| 行情、任务与报告页面 | `apps/web/src/pages/Dashboard/index.tsx`、`Jobs/index.tsx`、`Job/index.tsx`、`Reports/index.tsx`、`Report/index.tsx`              |
 | 请求与契约           | `apps/web/src/api/jobs.ts`、`market.ts`、`reports.ts`、`types.ts`；`apps/api/app/jobs/routes.py`、`schemas.py`                    |
 | 快照与任务协调       | `apps/api/app/market/service.py`、`jobs/service.py`、`worker.py`                                                                  |
 | 图、模型与归档       | `apps/api/app/agents/research.py`、`assistant.py`、`run_job.py`                                                                   |

@@ -1,93 +1,14 @@
-import { reportQueries } from '../features/reports/queries';
-import { useState } from 'react';
+import { reportQueries } from '../../features/reports/queries';
+
 import { useQuery } from '@tanstack/react-query';
-import { Table, Tag } from 'antd';
-import type { TableColumnsType } from 'antd';
+import { Tag } from 'antd';
+
 import { Link, useParams } from 'react-router-dom';
 
-import type { AnalysisReport } from '../api/types';
-import { ErrorNotice } from '../components/ErrorNotice';
-import { formatTime } from '../lib/format';
-import styles from '../styles/Workbench.module.css';
-
-export function ReportsPage() {
-  const [page, setPage] = useState(1);
-  const history = useQuery(reportQueries.list(page));
-  const columns: TableColumnsType<AnalysisReport> = [
-    {
-      title: '研究对象',
-      dataIndex: 'name',
-      render: (name: string, report) => (
-        <div className={styles.stockName}>
-          <strong>{name}</strong>
-          <span>{report.symbol}</span>
-        </div>
-      ),
-    },
-    {
-      title: '规则热度分',
-      dataIndex: 'heat_score',
-      render: (score: number | null) => (
-        <strong className={styles.scoreText}>
-          {score === null ? '不可用' : `${score.toFixed(2)} / 100`}
-        </strong>
-      ),
-    },
-    {
-      title: '数据模式',
-      key: 'mode',
-      render: (_, report) => (
-        <Tag color={report.is_demo ? 'orange' : 'blue'}>
-          {report.is_demo ? '演示' : '公开行情'} · {report.model_name ?? '规则分析'}
-        </Tag>
-      ),
-    },
-    { title: '创建时间（北京时间）', dataIndex: 'created_at', render: formatTime },
-    {
-      title: '报告',
-      key: 'action',
-      render: (_, report) => <Link to={`/reports/${report.id}`}>查看报告</Link>,
-    },
-  ];
-  return (
-    <div className={styles.pageStack}>
-      <div className={styles.pageHeading}>
-        <div>
-          <div className={styles.eyebrow}>RESEARCH ARCHIVE</div>
-          <h1>分析记录</h1>
-          <p>每份报告保留生成时的数据依据，刷新行情不会改写历史结论。</p>
-        </div>
-        <Link to="/">返回行情工作台 →</Link>
-      </div>
-      {history.error && <ErrorNotice error={history.error} retry={() => void history.refetch()} />}
-      <section className={styles.panel}>
-        <Table<AnalysisReport>
-          columns={columns}
-          dataSource={history.data?.items ?? []}
-          rowKey="id"
-          loading={history.isPending}
-          scroll={{ x: 800 }}
-          pagination={{
-            current: page,
-            pageSize: 10,
-            total: history.data?.total ?? 0,
-            onChange: setPage,
-            showSizeChanger: false,
-            showTotal: (total) => `共 ${total} 份报告`,
-          }}
-          locale={{
-            emptyText: (
-              <div className={styles.empty}>
-                <p>还没有分析记录</p>
-                <Link to="/">选择一个样本，开始首次分析 →</Link>
-              </div>
-            ),
-          }}
-        />
-      </section>
-    </div>
-  );
-}
+import { ErrorNotice } from '../../components/ErrorNotice';
+import { formatTime } from '../../lib/format';
+import layout from '../../styles/Workbench.module.css';
+import styles from './index.less';
 
 export function ReportPage() {
   const { id = '' } = useParams();
@@ -97,8 +18,8 @@ export function ReportPage() {
   if (!reportQuery.data) return <p role="status">正在读取分析报告…</p>;
   const report = reportQuery.data;
   return (
-    <div className={styles.pageStack}>
-      <div className={styles.pageHeading}>
+    <div className={`${layout.pageStack} ${styles.root}`}>
+      <div className={layout.pageHeading}>
         <div>
           <Link to="/reports">← 分析记录</Link>
           <h1>{report.name} · 研究报告</h1>
@@ -111,7 +32,7 @@ export function ReportPage() {
           {report.is_demo ? '演示数据' : report.source} · {report.model_name ?? '规则分析'}
         </Tag>
       </div>
-      <section className={`${styles.panel} ${styles.reportSummary}`}>
+      <section className={`${layout.panel} ${styles.reportSummary}`}>
         <div className={styles.scoreBlock}>
           <span>规则热度分</span>
           <strong>
@@ -123,16 +44,16 @@ export function ReportPage() {
         <div>
           <h2>分析摘要</h2>
           <p>{report.summary}</p>
-          <span className={styles.muted}>该分数未做概率校准，不代表连板概率。</span>
+          <span className={layout.muted}>该分数未做概率校准，不代表连板概率。</span>
         </div>
       </section>
       {report.insight && (
-        <section className={`${styles.panel} ${styles.scopePanel}`}>
+        <section className={`${layout.panel} ${layout.scopePanel}`}>
           <h2>模型解读 · {report.model_name}</h2>
-          <p style={{ display: 'block', lineHeight: 1.9 }}>{report.insight.summary}</p>
+          <p className={styles.insight}>{report.insight.summary}</p>
           <ul>
             {report.insight.observations.map((observation, index) => (
-              <li key={index} style={{ marginBottom: 12 }}>
+              <li key={index} className={styles.observation}>
                 {observation.text} <small>依据：{observation.evidence_ids.join('、')}</small>
               </li>
             ))}
@@ -147,16 +68,14 @@ export function ReportPage() {
           {Object.entries(report.evidence).map(([name, value]) => (
             <details key={name}>
               <summary>查看引用证据：{name}</summary>
-              <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                {JSON.stringify(value, null, 2)}
-              </pre>
+              <pre className={styles.evidence}>{JSON.stringify(value, null, 2)}</pre>
             </details>
           ))}
         </section>
       )}
       <div className={styles.reportGrid}>
-        <section className={styles.panel}>
-          <div className={styles.panelHeading}>
+        <section className={layout.panel}>
+          <div className={layout.panelHeading}>
             <h2>因子贡献</h2>
             <span>计算过程透明可查</span>
           </div>
@@ -182,8 +101,8 @@ export function ReportPage() {
             ))}
           </div>
         </section>
-        <section className={styles.panel}>
-          <div className={styles.panelHeading}>
+        <section className={layout.panel}>
+          <div className={layout.panelHeading}>
             <h2>执行记录</h2>
             <Tag color="green">已完成</Tag>
           </div>
@@ -200,7 +119,7 @@ export function ReportPage() {
           </ol>
         </section>
       </div>
-      <section className={`${styles.panel} ${styles.riskPanel}`}>
+      <section className={`${layout.panel} ${styles.riskPanel}`}>
         <h2>风险与数据边界</h2>
         <ul>
           {report.risks.map((risk) => (
@@ -209,7 +128,7 @@ export function ReportPage() {
         </ul>
       </section>
       {Object.keys(report.research_context).length > 0 && (
-        <section className={`${styles.panel} ${styles.scopePanel}`}>
+        <section className={`${layout.panel} ${layout.scopePanel}`}>
           <h2>提交时冻结的研究证据</h2>
           <p>各资料日期和来源不同；缺失不表示没有事件。后续刷新不会改写本报告。</p>
           {Object.entries(report.research_context).map(([name, value]) => (
@@ -228,14 +147,12 @@ export function ReportPage() {
                   } as Record<string, string>
                 )[name] ?? name}
               </summary>
-              <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-                {JSON.stringify(value, null, 2)}
-              </pre>
+              <pre className={styles.evidence}>{JSON.stringify(value, null, 2)}</pre>
             </details>
           ))}
         </section>
       )}
-      <section className={`${styles.panel} ${styles.provenance}`}>
+      <section className={`${layout.panel} ${styles.provenance}`}>
         <h2>数据依据</h2>
         <dl>
           <div>

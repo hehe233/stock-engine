@@ -1,0 +1,40 @@
+{
+  "events": [
+    { "kind": "running", "payload": { "attempt": 1 } },
+    { "kind": "model.start", "payload": { "attempt": 1, "block_id": "report" } },
+    {
+      "kind": "report.delta",
+      "payload": { "attempt": 1, "block_id": "report", "insight": { "summary": "旧草稿" } }
+    },
+    { "kind": "failed", "payload": { "attempt": 1, "message": "连接中断" } },
+    { "kind": "running", "payload": { "attempt": 2 } },
+    { "kind": "model.start", "payload": { "attempt": 2, "block_id": "report" } },
+    { "kind": "report.start", "payload": { "attempt": 2, "block_id": "report" } },
+    {
+      "kind": "reasoning.delta",
+      "payload": { "attempt": 2, "block_id": "report", "text": "核验来源。" }
+    },
+    {
+      "kind": "report.delta",
+      "payload": { "attempt": 2, "block_id": "report", "insight": { "summary": "新草稿" } }
+    },
+    { "kind": "model.end", "payload": { "attempt": 2, "block_id": "report" } },
+    {
+      "kind": "report.patch",
+      "payload": {
+        "attempt": 2,
+        "patch": {
+          "summary": "最终报告",
+          "insight": { "summary": "已校验", "observations": [], "limitations": ["仅研究验证"] }
+        }
+      }
+    },
+    { "kind": "succeeded", "payload": { "attempt": 2, "report_id": "fixture-report" } }
+  ],
+  "expected": {
+    "summary": "最终报告",
+    "insight_summary": "已校验",
+    "old_block_interrupted": true,
+    "new_block_done": true
+  }
+}

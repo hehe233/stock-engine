@@ -1,3 +1,4 @@
+import styles from './index.less';
 import type { CSSProperties } from 'react';
 
 // Static paths from a2a-frontend's IconParkFont sprite. No remote JavaScript is executed.
@@ -19,13 +20,7 @@ export function IconParkFont({
 }) {
   return (
     <span className={`anticon ${className}`} aria-hidden="true" style={style}>
-      <svg
-        width="1em"
-        height="1em"
-        fill="currentColor"
-        focusable="false"
-        style={{ display: 'inline-block', verticalAlign: '-0.125em' }}
-      >
+      <svg width="1em" height="1em" fill="currentColor" focusable="false" className={styles.icon}>
         <use href={`/icons/agent.svg#${type}`} />
       </svg>
     </span>

@@ -18,13 +18,13 @@
 
 ## 第一课：沿着一次点击阅读
 
-1. `apps/web/src/pages/Dashboard.tsx`：点击「分析」后，mutation 传入 `symbol` 和当前 `snapshot_id`。
+1. `apps/web/src/pages/Dashboard/index.tsx`：点击「分析」后，mutation 传入 `symbol` 和当前 `snapshot_id`。
 2. `apps/web/src/api/jobs.ts`：发送 `POST /api/jobs`，附带分析模式和模型名，得到 202 + job_id。
 3. `apps/api/app/schemas.py`：Pydantic 验证请求格式，不合格返回 422。
 4. `jobs/service.py`：验证快照和模型列表，任务入库。`worker.py` 原子领取任务，启动受超时控制的子进程。
 5. `agents/run_job.py` 打开 checkpointer；`research.py` 计算规则；`assistant.py` 在模型模式下执行「选择工具 → 读取证据 → 再判断 → 结构化输出」。
 6. `run_job.py` 把 AnalysisReport、原始引用证据、任务成功状态放在同一事务中提交。
-7. `pages/Jobs.tsx` 订阅 SSE，并轮询最终状态，成功后跳转报告页。刷新报告时根据 ID 从数据库读取。
+7. `pages/Job/index.tsx` 订阅 SSE，并轮询最终状态，在当前工作区查看草稿和归档报告；不会自动跳转。`pages/Jobs/index.tsx` 只展示任务列表，报告详情 `pages/Report/index.tsx` 根据 ID 从数据库读取。
 
 练习：在浏览器 Network 面板找到请求体，复制 `snapshot_id`；去报告页确认它与报告中的快照 ID 相同。
 
@@ -77,7 +77,7 @@ SQLAlchemy 的常见顺序是：创建 Session → 查询 / 添加对象 → `co
 
 ## 第六课：理解任务、检查点和事务的边界
 
-模型设置的完整链路可从 `pages/ModelSettings.tsx` 开始：表单提交 → `model_settings/service.py` 校验与保存不可变版本 → `/api/config` 返回无密钥的模型列表 → 创建任务绑定 model_config_id → run_job 读取该版本。API 进程与 worker 不能只靠各自的内存变量同步配置，所以这里使用共享数据库。
+模型设置的完整链路可从 `pages/ModelSettings/index.tsx` 与 `features/model-settings/SettingsForm/index.tsx` 开始：表单提交 → `model_settings/service.py` 校验与保存不可变版本 → `/api/config` 返回无密钥的模型列表 → 创建任务绑定 model_config_id → run_job 读取该版本。API 进程与 worker 不能只靠各自的内存变量同步配置，所以这里使用共享数据库。
 
 多套配置新增 `model_profiles`：稳定 ID 与名称指向最新不可变版本；活动配置指针决定新任务的供应商。编辑、切换和删除不会修改已提交任务使用的版本。对照 [多配置设计与操作](../modules/model-profiles.md) 阅读迁移和回归测试。
 

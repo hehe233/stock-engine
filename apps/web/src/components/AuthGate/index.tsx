@@ -1,9 +1,9 @@
-import { authQueries } from '../features/auth/queries';
+import { authQueries } from '../../features/auth/queries';
 import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Input } from 'antd';
-import { authApi } from '../api/auth';
-import { ErrorNotice } from './ErrorNotice';
+import { authApi } from '../../api/auth';
+import { ErrorNotice } from '../ErrorNotice';
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [key, setKey] = useState('');
@@ -38,7 +38,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           event.preventDefault();
           login.mutate(key);
         }}
-        style={{ maxWidth: 400, marginTop: 20 }}
+        className={styles.form}
       >
         <Input.Password
           aria-label="应用访问密钥"
@@ -50,7 +50,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           htmlType="submit"
           type="primary"
           loading={login.isPending}
-          style={{ marginTop: 16 }}
+          className={styles.submit}
         >
           进入工作台
         </Button>
@@ -59,3 +59,4 @@ export function AuthGate({ children }: { children: ReactNode }) {
     </main>
   );
 }
+import styles from './index.less';

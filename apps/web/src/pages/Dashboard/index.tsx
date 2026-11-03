@@ -1,22 +1,23 @@
-import { invalidateJobs } from '../features/jobs/queries';
-import { marketQueries, invalidateMarketStatus } from '../features/market/queries';
-import { configQueries } from '../features/config/queries';
+import { QuoteTable } from '../../features/market/QuoteTable';
+import { invalidateJobs } from '../../features/jobs/queries';
+import { marketQueries, invalidateMarketStatus } from '../../features/market/queries';
+import { configQueries } from '../../features/config/queries';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { Alert, Button, Input, Select, Table, Tag } from 'antd';
-import type { TableColumnsType, TableProps } from 'antd';
+import { Alert, Button, Input, Select, Tag } from 'antd';
+import type { TableProps } from 'antd';
 import { Link, useNavigate } from 'react-router-dom';
 
-import { marketApi } from '../api/market';
-import { jobsApi } from '../api/jobs';
-import type { AnalysisMode, AssetType, Quote } from '../api/types';
-import { ErrorNotice } from '../components/ErrorNotice';
-import { formatAmount, formatChange, formatTime } from '../lib/format';
-import styles from '../styles/Workbench.module.css';
+import { marketApi } from '../../api/market';
+import { jobsApi } from '../../api/jobs';
+import type { AnalysisMode, AssetType, Quote } from '../../api/types';
+import { ErrorNotice } from '../../components/ErrorNotice';
+import { formatTime } from '../../lib/format';
+import layout from '../../styles/Workbench.module.css';
+import styles from './index.less';
 
 const assetNames = { stock: 'A 股', etf: 'ETF', index: '指数' };
-const numeric = (value: number | null) => (value === null ? '未提供' : value.toFixed(2));
 
 export function Dashboard() {
   const [asset, setAsset] = useState<AssetType>('stock');
@@ -88,99 +89,6 @@ export function Dashboard() {
       model: separator < 0 ? undefined : modelChoice.slice(separator + 1),
     });
   };
-  const baseColumns: TableColumnsType<Quote> = [
-    {
-      title: '代码 / 名称',
-      key: 'symbol',
-      width: 185,
-      render: (_, quote) => (
-        <div className={styles.stockName}>
-          <strong>{quote.name}</strong>
-          <span>{quote.symbol}</span>
-        </div>
-      ),
-    },
-    {
-      title: '最新价',
-      dataIndex: 'price',
-      width: 100,
-      align: 'right',
-      sorter: true,
-      render: numeric,
-    },
-    {
-      title: '涨跌幅',
-      dataIndex: 'change_pct',
-      width: 110,
-      align: 'right',
-      sorter: true,
-      render: (value: number | null) => (
-        <strong
-          className={
-            value !== null && value > 0
-              ? styles.rise
-              : value !== null && value < 0
-                ? styles.fall
-                : undefined
-          }
-        >
-          {formatChange(value)}
-        </strong>
-      ),
-    },
-    {
-      title: '换手率',
-      dataIndex: 'turnover_pct',
-      width: 100,
-      align: 'right',
-      sorter: true,
-      render: (value: number | null) => (value === null ? '未提供' : `${numeric(value)}%`),
-    },
-    {
-      title: '量比',
-      dataIndex: 'volume_ratio',
-      width: 90,
-      align: 'right',
-      sorter: true,
-      render: numeric,
-    },
-    {
-      title: '成交额',
-      dataIndex: 'amount_yuan',
-      width: 110,
-      align: 'right',
-      sorter: true,
-      render: formatAmount,
-    },
-    { title: '源时间', dataIndex: 'quote_time', width: 165, render: formatTime },
-    {
-      title: '研究',
-      key: 'action',
-      fixed: 'right',
-      width: 90,
-      render: (_, quote) => (
-        <Button
-          type="link"
-          size="small"
-          aria-label={`分析 ${quote.symbol}`}
-          disabled={analyze.isPending || quote.price === null}
-          onClick={() => startAnalysis(quote)}
-          loading={analyze.isPending && analyze.variables?.symbol === quote.symbol}
-        >
-          分析
-        </Button>
-      ),
-    },
-  ];
-  const columns: TableColumnsType<Quote> = baseColumns.map((column) => ({
-    ...column,
-    sortOrder:
-      'dataIndex' in column && column.dataIndex === sort.field
-        ? sort.descending
-          ? 'descend'
-          : 'ascend'
-        : null,
-  }));
   const onChange: TableProps<Quote>['onChange'] = (pagination, _, sorter, extra) => {
     if (extra.action === 'paginate') setPage(pagination.current ?? 1);
     if (extra.action === 'sort' && !Array.isArray(sorter)) {
@@ -194,10 +102,10 @@ export function Dashboard() {
   const demo = config.data?.market_provider === 'demo';
   const collection = status.data?.collection[asset];
   return (
-    <div className={styles.pageStack}>
-      <div className={styles.pageHeading}>
+    <div className={`${layout.pageStack} ${styles.root}`}>
+      <div className={layout.pageHeading}>
         <div>
-          <div className={styles.eyebrow}>MARKET WORKBENCH</div>
+          <div className={layout.eyebrow}>MARKET WORKBENCH</div>
           <h1>行情工作台</h1>
           <p>
             A 股、场内 ETF 与指数 · 每五分钟尝试更新 ·{' '}
@@ -248,7 +156,7 @@ export function Dashboard() {
           title="当前展示的是超过两个采集周期的旧快照；休市时也保留真实采集时间。"
         />
       )}
-      <section className={styles.stats} aria-label="数据覆盖状态">
+      <section className={layout.stats} aria-label="数据覆盖状态">
         <article>
           <span>来源返回数量</span>
           <strong>
@@ -273,18 +181,18 @@ export function Dashboard() {
           <p>格式校验未通过</p>
         </article>
       </section>
-      <section className={styles.panel}>
-        <div className={styles.panelHeading}>
+      <section className={layout.panel}>
+        <div className={layout.panelHeading}>
           <h2>行情观察池</h2>
           <Tag color={collecting ? 'processing' : 'blue'}>
             {collecting ? '采集中' : (market.data?.source ?? '等待数据')}
           </Tag>
         </div>
-        <div className={styles.toolbar} style={{ flexWrap: 'wrap' }}>
+        <div className={`${layout.toolbar} ${styles.filters}`}>
           <Select
             aria-label="证券类别"
             value={asset}
-            style={{ width: 120 }}
+            className={styles.assetSelect}
             options={Object.entries(assetNames).map(([value, label]) => ({ value, label }))}
             onChange={(value) => {
               setAsset(value);
@@ -297,7 +205,7 @@ export function Dashboard() {
             placeholder="输入代码或名称"
             value={search}
             allowClear
-            className={styles.search}
+            className={layout.search}
             onChange={(event) => {
               setSearch(event.target.value);
               setPage(1);
@@ -307,37 +215,31 @@ export function Dashboard() {
             aria-label="分析模型"
             value={modelChoice}
             options={modelOptions}
-            style={{ minWidth: 230, maxWidth: '100%' }}
+            className={styles.modelSelect}
             onChange={setSelection}
           />
           <Link to="/settings/models">配置 API / 管理模型</Link>
         </div>
-        <Table<Quote>
-          rowKey="symbol"
-          columns={columns}
-          dataSource={market.data?.quotes ?? []}
+        <QuoteTable
+          quotes={market.data?.quotes ?? []}
+          total={market.data?.total ?? 0}
+          page={page}
+          search={search}
+          sort={sort}
           loading={market.isFetching}
-          size="small"
-          scroll={{ x: 1050 }}
+          pending={analyze.isPending}
+          pendingSymbol={analyze.variables?.symbol}
+          onAnalyze={startAnalysis}
           onChange={onChange}
-          pagination={{
-            current: page,
-            pageSize: 50,
-            total: market.data?.total ?? 0,
-            showSizeChanger: false,
-          }}
-          locale={{
-            emptyText: search ? '没有匹配的样本，请调整搜索条件' : '暂无可用行情，请查看采集状态',
-          }}
         />
-        <div className={styles.dataStamp}>
+        <div className={layout.dataStamp}>
           <span>本批最新源时间：{formatTime(market.data?.as_of ?? null)}</span>
           <span>采集完成：{market.data ? formatTime(market.data.fetched_at) : '尚未完成'}</span>
           <span>同批记录可能存在不同延迟</span>
         </div>
       </section>
       {market.data && (
-        <section className={`${styles.panel} ${styles.scopePanel}`}>
+        <section className={`${layout.panel} ${layout.scopePanel}`}>
           <h2>数据质量与分析边界</h2>
           <ul>
             {market.data.warnings.map((warning) => (
@@ -347,7 +249,7 @@ export function Dashboard() {
           {market.data.missing_from_previous.length > 0 && (
             <details>
               <summary>查看较上批缺失代码</summary>
-              <p style={{ overflowWrap: 'anywhere' }}>
+              <p className={styles.missingSymbols}>
                 {market.data.missing_from_previous.join('、')}
               </p>
             </details>

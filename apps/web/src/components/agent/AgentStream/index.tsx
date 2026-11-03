@@ -5,12 +5,13 @@ import {
   ToolOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons';
-import type { JobEvent, ResearchJob } from '../../api/types';
-import { formatTime } from '../../lib/format';
-import { projectEvents, type StreamBlock } from './stream';
-import { StreamText } from './StreamText';
-import { IconParkFont } from './IconParkFont';
-import styles from './AgentStream.module.css';
+import type { JobEvent, ResearchJob } from '../../../api/types';
+import { formatTime } from '../../../lib/format';
+import { projectEvents, type StreamBlock } from '../stream';
+import { StreamText } from '../StreamText';
+import { IconParkFont } from '../IconParkFont';
+import styles from './index.less';
+import chrome from '../panel.module.css';
 
 const toolNames: Record<string, string> = {
   read_quote: '读取行情快照',
@@ -144,7 +145,7 @@ export function AgentStream({
   );
   return (
     <section className={styles.streamPanel} aria-label="Agent 分析过程">
-      <header className={styles.panelHeader}>
+      <header className={chrome.panelHeader}>
         <div className={styles.agentAvatar}>
           <IconParkFont type="icon-agent-linear" />
         </div>

@@ -1,8 +1,9 @@
 import { FileTextOutlined, LoadingOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
-import type { AnalysisReport, ReportPreview, ResearchJob } from '../../api/types';
-import { StreamText } from './StreamText';
-import styles from './AgentStream.module.css';
+import type { AnalysisReport, ReportPreview, ResearchJob } from '../../../api/types';
+import { StreamText } from '../StreamText';
+import styles from './index.less';
+import chrome from '../panel.module.css';
 
 export function GeneratedReport({
   preview,
@@ -19,7 +20,7 @@ export function GeneratedReport({
   const hasContent = data.summary || data.factors || insight;
   return (
     <section className={styles.reportPanel} aria-label="生成式研究报告" aria-busy={active}>
-      <header className={styles.panelHeader}>
+      <header className={chrome.panelHeader}>
         <FileTextOutlined className={styles.reportIcon} />
         <div>
           <h2>{report ? `${report.name} · 研究报告` : '研究报告'}</h2>

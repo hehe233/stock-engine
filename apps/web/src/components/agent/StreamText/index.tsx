@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import styles from './AgentStream.module.css';
+import styles from './index.less';
 
 export function StreamText({ text, animate = false }: { text: string; animate?: boolean }) {
   const [visible, setVisible] = useState(animate ? '' : text);

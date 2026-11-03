@@ -4,7 +4,7 @@
 
 ## 路由与页面归属
 
-- 路由在 `apps/web/src/main.tsx` 的 `createBrowserRouter` 注册；新建或迁移页面采用 `pages/页面名/index.tsx`，自身样式放在 `index.less`，沿用命名导出。现有平铺页面在后续批次迁移。新增导航入口同时检查 `App.tsx` 的分组、活动态和移动导航。
+- 路由在 `apps/web/src/main.tsx` 的 `createBrowserRouter` 注册；新建或迁移页面采用 `pages/页面名/index.tsx`，自身样式放在 `index.less`，沿用命名导出。当前页面均已采用目录入口，列表与详情分别组织；首页直接加载，其余路由按需加载，加载边界放在路由内容内以保留外壳和鉴权。新增导航入口同时检查 `App.tsx` 的分组、活动态和移动导航。
 - `App.tsx` 是持久外壳，子页面由 `Outlet` 展示；鉴权沿用 `AuthGate`。侧栏宽度、折叠和抽屉开关不应重挂载任务页或重建 SSE。
 - 页面协调查询、mutation 和展示。可复用展示拆到 `components/`；领域计算保留在后端对应模块。仅因页面变大不新建第二套路由或状态体系。
 - 生产为 Vite 静态产物；新增深链接要考虑刷新时的 SPA fallback，开发代理不能代表生产代理已配置。

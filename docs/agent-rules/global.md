@@ -37,7 +37,7 @@
 
 ```powershell
 pnpm exec prettier --check AGENTS.md docs/README.md
-pnpm --filter @stock-engine/web exec eslint src/pages/Jobs.tsx
+pnpm --filter @stock-engine/web exec eslint src/pages/Jobs/index.tsx
 pnpm --filter @stock-engine/web exec playwright test e2e/agent-stream.spec.ts
 ```
 

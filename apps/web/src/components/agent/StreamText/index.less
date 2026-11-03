@@ -1,0 +1,61 @@
+.markdown {
+  font-size: inherit;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.markdown p {
+  margin: 0 0 10px;
+}
+.markdown p:last-child {
+  margin-bottom: 0;
+}
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  font-size: 1.12em;
+  margin: 18px 0 8px;
+}
+.markdown ul,
+.markdown ol {
+  padding-left: 20px;
+}
+.markdown pre {
+  white-space: pre-wrap;
+  background: #f3f5f9;
+  padding: 12px;
+  border-radius: 6px;
+}
+.markdown table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+.markdown th,
+.markdown td {
+  padding: 7px 10px;
+  border: 1px solid #e6ebf3;
+}
+.markdown blockquote {
+  border-left: 2px solid #b6c9e1;
+  padding-left: 14px;
+  margin-left: 0;
+}
+.markdown[data-streaming='true']::after {
+  content: '';
+  display: inline-block;
+  height: 13px;
+  width: 2px;
+  background: #76a6de;
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .markdown::after {
+    animation: none;
+  }
+}

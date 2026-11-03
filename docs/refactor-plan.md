@@ -2,9 +2,9 @@
 
 [返回文档总索引](README.md) · [架构索引](architecture/README.md) · [源码导航](architecture/source-map.md)
 
-评估日期：2026-11-03。本文记录结构评估、实施方案和进度；P0、P1 已完成；P2 请求、契约、进程与产物改造已实施，验证结果见实施状态和验证记录；P3 按条件推进。项目定位以 [AGENTS.md](../AGENTS.md) 和 [项目 README](../README.md) 为准：单用户、单机的 A 股研究与 Agent 学习项目，当前处于 P3 研究验证阶段。
+评估日期：2026-11-03。本文记录结构评估、实施方案和进度；P0、P1、P2 已完成，P3 的前端目录收口、职责拆分与按需加载已实施；ORM、类型生成和持久数据迁移仍按条件推进。验证结果见实施状态和验证记录。项目定位以 [AGENTS.md](../AGENTS.md) 和 [项目 README](../README.md) 为准：单用户、单机的 A 股研究与 Agent 学习项目，当前处于 P3 研究验证阶段。
 
-前端组织方式按用户明确要求修订：参考 `E:/BRDKurin/project/code/a2a-frontend`，页面、可视业务模块和独立组件采用「语义目录 + `index.tsx` + `index.less`」。保留 CSS Modules 的局部作用域，样式语言迁到 Less；P0 已接入 Less/CSS Modules 并将 ErrorNotice 迁为目录组件；P1 已迁移 Quant/QuantRun/Research/History 及其领域模块；其余页面以后续功能改动为单位渐进迁移。
+前端组织方式按用户明确要求修订：参考 `E:/BRDKurin/project/code/a2a-frontend`，页面、可视业务模块和独立组件采用「语义目录 + `index.tsx` + `index.less`」。保留 CSS Modules 的局部作用域，样式语言迁到 Less；P0 接入构建并迁移 ErrorNotice，P1 迁移 Quant/QuantRun/Research/History，P3 完成其余页面、鉴权和 Agent 展示组件。应用装配 `main.tsx`、外壳 `App.tsx` 与共享布局 CSS 保持原入口；请求、查询、状态投影等纯逻辑文件使用描述性名称。
 
 ## 实施状态与优先级
 
@@ -15,7 +15,7 @@
 | P0     | Less/CSS Modules 构建基础；公共请求、时间、证券及采集依赖拆分 | 已完成；验证见[记录](history/verification.md) |
 | P1     | Quant 工作台/详情、研究共享表格；后端业务路由与冻结证据归属   | 已完成；验证见[记录](history/verification.md) |
 | P2     | HTTP/查询缓存、响应契约、worker 进程监督与量化产物读取        | 已实施，验证见[记录](history/verification.md) |
-| P3     | 按实际需求拆 ORM、生成类型与迁移持久数据目录                  | 条件实施                                      |
+| P3     | 前端目录收口、职责拆分、按需加载；条件性 ORM/类型/数据优化    | 前端批次已完成；其余条件实施，见下文          |
 
 P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 index.less；后端 http/dependencies.py、shared/time.py、shared/securities.py、providers/base.py、providers/runner.py、providers/normalization.py。调用方和测试已经切换公共导入；表结构、API 路径与任务执行语义不变。
 
@@ -53,9 +53,24 @@ P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 ind
 
 本批未调整数据库表结构、HTTP URL、快照/任务标识、checkpoint 或持久数据目录。新建可视模块继续使用 `index.tsx + index.less`；本批增加的 `queries.ts`、请求和契约是纯逻辑文件，不创建空的可视入口。完整验证及未覆盖范围见[验证记录](history/verification.md)。
 
-### 接下来如何优化：P3 按条件启动
+### P3 本批改造与原因
 
-1. **先按实际改动迁移剩余页面组件。** Dashboard、Portfolio、ModelSettings 和 Agent 展示组件在功能变化时拆成目录内 `index.tsx + index.less`；先选修改频繁且职责集中的一块。原因：逐块验证交互与样式，避免把纯文件搬迁变成大范围回归。
+| 已实施改造                                                                                                                      | 为什么这样优化                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Dashboard、Portfolio、ModelSettings、Jobs/Job、Reports/Report、Roadmap 改为目录页面；AuthGate 与 Agent 独立展示组件采用成对入口 | 代码和局部样式同目录，按功能定位一致；纯逻辑与共享布局保留独立文件，避免空壳和重复样式                       |
+| `features/market/QuoteTable/` 管表格展示；Dashboard 管筛选、查询与分析提交                                                      | 表格列和展示变化集中处理，页面继续拥有完整的数据与操作上下文                                                 |
+| `features/portfolio/` 拆出 PositionEditor、PositionImportPanel、PositionTable                                                   | 手工草稿、CSV 预览和列表操作独立变化；各模块拥有自己的错误和提交状态，降低修改一种操作时影响另一种操作的风险 |
+| `features/model-settings/SettingsForm/` 管表单与密钥草稿，页面管配置选择、启用和删除                                            | 区分编辑配置和管理配置；保留未保存确认、revision 冲突和密钥不进入查询缓存的边界                              |
+| 任务/报告列表与详情分离，首页外的路由按需加载，Suspense 放在路由内容内                                                          | 浏览列表无需提前加载流式详情和 Markdown；首次首页访问减少下载，加载期间应用外壳和鉴权保持挂载                |
+| Agent 展示样式按组件归属拆分，报告/路线图专用规则移出 Workbench；仅复用真正共享的布局                                           | 降低跨组件样式耦合，便于按路由提取 CSS，同时避免复制公共规则                                                 |
+
+验证：类型检查、改动文件 ESLint、Ant Design 检查和生产构建通过；前端完整回归 **35 passed**，其中新增 5 项覆盖持仓编辑/取消/删除、CSV 错误隔离、模型配置草稿、深链接/窄屏和鉴权。补回 P2 提交遗漏的跨端 SSE 夹具，后端相关测试 **4 passed**。详细范围见[验证记录](history/verification.md)。
+
+生产资源对比使用本批修改前备份的 dist 与本批构建产物，在相同冻结演示响应下用全新浏览器上下文读取首页：实际请求 JS 从 **1,359,513 B → 1,050,535 B（减少 22.7%）**，对应文件 gzip 估算 **438,295 B → 341,165 B（减少 22.2%）**。模型设置代码在导航时才请求。该结果表示首屏资源推迟加载，不代表总包体积或真实网络速度同比改善；主包仍超过 500 kB，计时受本机预热与顺序影响，不作提速承诺。
+
+### 接下来如何优化：按证据启动后续批次
+
+1. **先分析剩余首屏依赖与真实加载瓶颈。** 用构建依赖分析、浏览器 Coverage 和受限网络/CPU 测量定位占比，再选择图标、表格或其他重依赖的导入/加载策略；每次与相同输入对照。原因：路由懒加载已有收益，但首页仍使用较大的共享组件；机械配置 vendor 分包只是换文件，不一定减少下载或执行。
 2. **跨端契约频繁漂移时，再引入 OpenAPI 类型生成。** 先把当前显式响应模型作为权威来源，再建立生成命令与差异检查；仍保留业务语义测试。原因：自动生成能减少手写重复，但不能自动保证未知值、来源时间或冻结证据正确。
 3. **db.py 出现维护冲突或独立迁移需求时，再按领域拆 ORM。** 同批维护统一 metadata 注册和旧库迁移回归。原因：当前单机模型尚可导航，单纯缩短文件不能抵消注册遗漏与迁移风险。
 4. **持久化运维需求明确后，再迁移数据目录。** 先演练业务库、checkpoint、产物的完整备份/恢复及回滚，再移动目录；孤儿文件回收单独设计引用核验。原因：代码回退不能还原数据，目录整理不应隐式删除研究证据。
@@ -441,7 +456,7 @@ apps/web/src/
 
 执行时按 [全局规则](agent-rules/global.md) 选择最小相关集合：后端在 `apps/api` 运行 `uv run pytest` 的对应文件和 Ruff；前端在根目录运行 `pnpm typecheck`，对改动文件执行 ESLint。构建使用 `scripts/build-web.ps1` 并读取实际退出码。浏览器测试需事先确认现有服务归属，再使用隔离演示模式；Playwright 配置不会自动启动服务。跨领域导入、模型注册或运行时变化扩大验证范围。
 
-性能需要单独比较同一固定输入的 API 耗时、SQL 查询次数、前端产物大小、事件投影时间或峰值内存。当前未做这些测量，因此本方案只承诺结构目标，不宣称改造后的提速比例。
+性能需要单独比较同一固定输入的 API 耗时、SQL 查询次数、前端产物大小、事件投影时间或峰值内存。初稿阶段未做这些测量；P3 已补充首页加载资源对比，结果与限制见实施状态，不据此推断 API、训练或真实网络提速比例。
 
 ### 5.2 兼容与回滚
 

@@ -156,7 +156,7 @@ stock-engine/
 
 ## 组件目录与样式
 
-新建或迁移的可视模块使用 PascalCase 目录，内部放置 index.tsx 与 index.less，保留命名导出。ErrorNotice、Quant/QuantRun/Research/History 页面及量化与研究领域组件已迁移；固定局部样式放在 index.less，真正共用的布局继续复用 Workbench.module.css，其他存量页面按模块渐进替换。Vite 通过 apps/web/build/component-less.ts 将 src 内相对路径导入的 index.less 交给 Less/CSS Modules 管线；全局 CSS、主题和原有请求/状态管理继续复用。
+新建或迁移的可视模块使用 PascalCase 目录，内部放置 index.tsx 与 index.less，保留命名导出。当前 pages 下的页面、features 下的可视模块以及鉴权、错误提示和 Agent 展示组件均已采用该结构；固定局部样式放在 index.less，真正共用的布局继续复用 Workbench.module.css。main.tsx 与 App.tsx 保留应用装配和外壳入口；首页直接加载，其余页面按路由懒加载，任务/报告列表与详情分别组织。Vite 通过 apps/web/build/component-less.ts 将 src 内相对路径导入的 index.less 交给 Less/CSS Modules 管线；全局 CSS、主题和原有请求/状态管理继续复用。
 
 修改该编译规则后，在根目录执行 scripts/check-styles.ps1。它以隐藏进程使用随机本机端口验证样式隔离、热更新和生产提取；依赖现有 pnpm、Node 22.6+ 的类型剥离支持以及 Microsoft Edge，不启动业务 API。读取 .runtime/styles.exit-code（0 才算通过），详细输出在 styles.stdout.log / styles.stderr.log。测试临时源码自动清理，截图和产物保留在 .runtime/p0-less-*。
 

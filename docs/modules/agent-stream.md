@@ -28,6 +28,10 @@
 
 `useJobStream` 批量提交前端状态、自动重连；token 不触发逐条 HTTP 状态刷新。报告选择、尺寸、展示状态在 `ReportWorkspace` 内，关闭抽屉不关闭 SSE。正文仅渲染安全 Markdown，不执行 HTML 或加载模型指定的图片。
 
+## 前端代码入口
+
+任务详情在 `pages/Job/index.tsx`，列表在 `pages/Jobs/index.tsx`，两者分别按需加载。`components/agent/` 下的 AgentStream、GeneratedReport、StreamText、ReportWorkspace、IconParkFont 各自使用 `index.tsx + index.less`；面板标题样式共用 `panel.module.css`。`useJobStream.ts` 与 `stream.ts` 保留纯逻辑入口，样式迁移不改变订阅、投影和报告校验边界。
+
 ## 模型兼容边界
 
 API 需要支持流式 Chat Completions 和 function calling。OpenAI 兼容适配器保留响应中可选的 `reasoning_content`；原生文本 reasoning/thinking block 同样可展示。模型未返回公开思考字段时，不推测或补造。最终模型解读使用强制 `ModelInsight` 工具调用，部分参数只作草稿，完整参数须经过严格 JSON 解析、Pydantic 和 evidence_id 校验。

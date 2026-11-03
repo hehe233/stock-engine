@@ -1,0 +1,252 @@
+.reportPanel {
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  min-width: 0;
+  overflow: hidden;
+}
+.previewBadge {
+  margin-left: auto;
+  font-size: 11px;
+  color: #848b9b;
+  white-space: nowrap;
+}
+.reportSection details summary {
+  cursor: pointer;
+  font-size: 12px;
+}
+.reportSection pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  background: #f1f4f9;
+  font-size: 11px;
+  line-height: 1.7;
+  border-radius: 6px;
+}
+.reportIcon {
+  color: #788fba;
+  font-size: 22px;
+}
+.previewBadge {
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: #f0f6ff;
+  color: #547cb0;
+}
+.reportBody {
+  padding: 28px;
+}
+.reportTitle > span {
+  color: #9aa7ba;
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+.reportTitle h3 {
+  color: #253b5a;
+  font-size: 23px;
+  margin: 9px 0;
+}
+.reportTitle p {
+  color: #8e97a6;
+  font-size: 12px;
+}
+.score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: #f4f7fc;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 24px 0;
+}
+.score span {
+  color: #75859a;
+  font-size: 12px;
+}
+.score strong {
+  display: block;
+  color: #265d9e;
+  font-size: 34px;
+  letter-spacing: -1px;
+  margin-top: 6px;
+  font-weight: 600;
+}
+.score small {
+  color: #97a5b8;
+  font-size: 13px;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.score p {
+  color: #8995a6;
+  font-size: 11px;
+  line-height: 1.9;
+}
+.reportSection {
+  margin-top: 26px;
+  color: #596579;
+  font-size: 13px;
+  line-height: 1.9;
+}
+.reportSection h3 {
+  color: #32445e;
+  font-size: 14px;
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+.sectionHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sectionHeading > span {
+  color: #9b8b6b;
+  font-size: 10px;
+}
+.factors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 20px;
+}
+.factors > div > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  font-size: 11px;
+}
+.factors strong {
+  font-weight: 500;
+  color: #56647a;
+}
+.factors span,
+.factors p {
+  color: #9ba3b0;
+  font-size: 10px;
+}
+.factors progress {
+  appearance: none;
+  border: none;
+  width: 100%;
+  height: 4px;
+  display: block;
+  margin: 8px 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.factors progress::-webkit-progress-bar {
+  background: #edf1f8;
+}
+.factors progress::-webkit-progress-value {
+  background: #7d9fcf;
+  border-radius: 4px;
+}
+.factors progress::-moz-progress-bar {
+  background: #7d9fcf;
+}
+.observations {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+.observations > div {
+  display: flex;
+  gap: 12px;
+}
+.observations > div > div {
+  min-width: 0;
+}
+.observationIndex {
+  font-size: 10px;
+  color: #8da2bd;
+  padding-top: 3px;
+}
+.citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.citations a {
+  background: #eff4fa;
+  color: #7892b3;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.risks {
+  padding: 15px 18px;
+  border-radius: 8px;
+  background: #fbf8f2;
+  color: #95836a;
+}
+.risks h3 {
+  color: #8e795c;
+}
+.risks ul {
+  padding-left: 16px;
+  margin: 0;
+  font-size: 11px;
+}
+.reportFooter {
+  padding: 16px 24px;
+  border-top: 1px solid #eef0f5;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  color: #8b99aa;
+}
+.reportFooter a {
+  color: #537eaf;
+}
+.reportEmpty {
+  padding: 38px 10px;
+  color: #a0abbb;
+  text-align: center;
+}
+.reportEmpty > :global(.anticon) {
+  font-size: 40px;
+  color: #b7c7de;
+}
+.reportEmpty h3 {
+  color: #6d7e95;
+  font-size: 15px;
+  font-weight: 500;
+  margin-top: 20px;
+}
+.reportEmpty p {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 12px 0 32px;
+}
+.skeleton {
+  height: 10px;
+  border-radius: 4px;
+  margin-top: 14px;
+  background: #f0f3f8;
+}
+.skeleton:last-child {
+  width: 65%;
+}
+@media (max-width: 600px) {
+  .reportBody {
+    padding: 20px 16px;
+  }
+  .previewBadge {
+    font-size: 10px;
+  }
+  .score {
+    padding: 15px;
+  }
+  .factors {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

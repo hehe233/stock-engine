@@ -2,6 +2,20 @@
 
 [返回历史索引](README.md)
 
+## 重构 P3：前端目录、职责与按需加载（2026-11-03）
+
+- 剩余 Dashboard、Portfolio、ModelSettings、Jobs/Job、Reports/Report、Roadmap 页面，以及 AuthGate、AgentStream、GeneratedReport、StreamText、ReportWorkspace、IconParkFont 迁为目录内 `index.tsx + index.less`。提取行情 QuoteTable、模型 SettingsForm、持仓 PositionEditor/PositionImportPanel/PositionTable。共同布局保留单一 CSS Module，报告/路线图专属规则与 Agent 展示样式归对应模块；未修改 Less 编译适配、后端业务、依赖或锁文件。
+- 首页保持直接加载，其余页面按路由懒加载；列表不再导入详情实现。Suspense 在路由内容内，App 与 AuthGate 持续挂载。保留 API URL、查询 key、任务订阅和不可变证据语义。
+- 根目录 `pnpm typecheck`、本次源码 ESLint 通过；`pnpm --filter @stock-engine/web exec antd lint src --format json` 为 **0 issues、0 skipped**。第一次类型检查发现持仓拆分时相对导入多回退一级，修正后通过。ESLint/antd 依赖读取遇到沙箱权限限制，重试于获准的当前用户环境通过。
+- 新增 `e2e/refactor-p3.spec.ts` 单独运行 **5 passed，25.6 秒**；完整 `pnpm test:e2e` 为 **35 passed，2.6 分钟**（28 项浏览器流程 + 7 项 HTTP/缓存/投影检查）。覆盖编辑选中持仓、取消草稿、切换后保存/删除、CSV 失败清除旧预览且保留编辑草稿、未保存配置确认、深链接/刷新/窄屏与鉴权错误恢复；既有行情、研究、量化训练/回测/下载和 SSE 全部通过。
+- 完整回归首次收集失败：P2 提交 `580b1dd` 的测试引用根目录 `tests/fixtures/agent-replay.json`，但该文件未随提交保存。本批补回共享事件夹具，供前端投影/浏览器与后端持久回放共用；在 `apps/api` 执行 `uv run pytest tests/test_agent_stream.py -q`，**4 passed，5.45 秒**。后端业务未修改，未重跑全量后端测试。提交本批时须一并纳入该新增夹具。
+- `scripts/build-web.ps1` 的 `.runtime/build.exit-code` 为 **0**，Vite 用时 **22.84 秒**。仍有超过 500 kB 的 chunk 提示，不能以按路由拆包视为性能问题已全部解决。
+- 生产资源探针以修改前备份 dist 和本批 dist 建立本机静态服务，冻结同一批演示 API 响应，每组运行 5 个全新浏览器上下文。首页实际请求 JS **1,359,513 B → 1,050,535 B（-22.7%）**；对应文件 gzip 计算 **438,295 B → 341,165 B（-22.2%）**。设置页代码改为导航时请求；生产环境的持仓/任务/报告/路线图直接进入和设置页导航通过。基线是修改前已有产物，本轮没有重新构建旧提交；gzip 为本地估算，不是服务器传输测量。计时受预热、测试顺序与本机网络影响，不作速度承诺，也不将首屏减少当作总资源减少。
+- 备份位于 `.runtime/p3-before-20261103-201751/`，包括 117 项源文件/文档及哈希、修改前 dist。资源记录为 `.runtime/p3-resource-comparison.json`。已检查本批完整回归产生的桌面 Agent 报告、移动报告抽屉、桌面模型设置和移动持仓截图；相关回归同时检查键盘/焦点、减少动态效果、加载与错误恢复。
+- 使用 `scripts/start-dev.ps1 -Demo` 的隔离演示服务；测试使用演示数据、mock 事件和本地模型协议，不访问真实行情或付费模型。ORM、OpenAPI 类型生成、持久数据迁移与 PostgreSQL 集成仍未执行；未重复未变化的 Less 编译器 HMR 专项测试。收尾检查见本节最终补记。
+
+最终补记：新增 E2E 的 ESLint 通过；本批 43 份源码/样式、12 份文档及 E2E/夹具共 **57 个文件**的 Prettier 检查通过。README、AGENTS 与 docs 的 **274 个本地链接目标**存在，前端 **225 处静态样式引用**可解析，可视目录入口均有配对 Less。`git diff --check` 通过（仅 autocrlf 提示），已核对未跟踪的新模块与 SSE 夹具，未暂存或提交。本批 API/worker/web 登记进程树已停止，8001/5173 无监听；8000 收尾时为其他工作的 PID 30560，未终止。
+
 ## 重构 P2：请求缓存、响应契约、进程监督与量化产物（2026-11-03）
 
 - 前端传输集中在 `api/http.ts`，原 client 的业务方法按领域拆分，持仓 API 独立；`features/<领域>/queries.ts` 集中 query options、key 与跨视图失效。保持既有 `/api`、超时、cookie 默认行为和 key 形状。任务终态同步报告，done 避免重复刷新；持仓创建任务也刷新最近任务列表。

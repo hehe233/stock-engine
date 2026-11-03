@@ -1,0 +1,245 @@
+.streamPanel {
+  background: #fff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  min-width: 0;
+  overflow: hidden;
+}
+.streamPanel {
+  position: relative;
+}
+.agentAvatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-size: 22px;
+}
+.connection {
+  margin-left: auto;
+  font-size: 11px;
+  color: #848b9b;
+  white-space: nowrap;
+}
+.connection::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: #a6adba;
+}
+.connection[data-live='true']::before {
+  background: #23ad83;
+}
+.runMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #717989;
+  font-size: 12px;
+  padding: 16px 24px 8px;
+}
+.runMeta > span:first-child {
+  color: #3f485a;
+}
+.runMeta :global(.anticon-loading) {
+  color: var(--brand);
+}
+.streamViewport {
+  max-height: min(720px, calc(100dvh - 300px));
+  min-height: 300px;
+  overflow: auto;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+.chain {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 24px 30px;
+}
+.step {
+  display: flex;
+  gap: 10px;
+  color: #9da5b5;
+  font-size: 14px;
+  line-height: 22px;
+}
+.step > :global(.anticon) {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.step strong {
+  font-size: 13px;
+  color: #5c6474;
+  font-weight: 500;
+}
+.step p {
+  font-size: 12px;
+  color: #9298a6;
+  margin-top: 3px;
+}
+.step[data-error='true'],
+.step[data-error='true'] strong {
+  color: #b54738;
+}
+.modelBlock {
+  min-width: 0;
+}
+.reasoning summary,
+.tool > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  list-style: none;
+  color: #707786;
+  font-size: 13px;
+  line-height: 22px;
+}
+.reasoning summary::-webkit-details-marker,
+.tool > summary::-webkit-details-marker {
+  display: none;
+}
+.reasoning summary > :last-child,
+.tool > summary > :last-child {
+  margin-left: auto;
+  font-size: 10px;
+  transition: transform 0.2s;
+}
+.reasoning:not([open]) summary > :last-child,
+.tool:not([open]) > summary > :last-child {
+  transform: rotate(-90deg);
+}
+.reasoning summary small,
+.tool summary small {
+  font-size: 11px;
+  font-weight: 400;
+  color: #9ca2ad;
+}
+.reasoningBody,
+.toolBody {
+  margin: 8px 0 0 7px;
+  padding: 4px 0 4px 17px;
+  border-left: 1px solid #e9ebf2;
+  color: #7c8493;
+  font-size: 13px;
+}
+.content {
+  padding-top: 18px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+.tool {
+  padding: 12px 14px;
+  border: 1px solid #edf0f5;
+  border-radius: 9px;
+  background: var(--surface-sidebar);
+  min-width: 0;
+}
+.tool summary strong {
+  color: #424b5b;
+  font-weight: 500;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.tool > summary > :first-child {
+  color: #9ca9bd;
+}
+.toolBody code {
+  color: #818a9c;
+  font-size: 11px;
+}
+.toolBody details {
+  margin-top: 7px;
+}
+.toolBody details summary {
+  cursor: pointer;
+  font-size: 12px;
+}
+.toolBody pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  background: #f1f4f9;
+  font-size: 11px;
+  line-height: 1.7;
+  border-radius: 6px;
+}
+.streamFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid #f0f1f5;
+  padding: 13px 24px;
+  color: #9aa1af;
+  font-size: 10px;
+}
+.streamFooter button {
+  border: none;
+  background: none;
+  color: #6683a6;
+  cursor: pointer;
+  padding: 3px 0;
+  font-size: 11px;
+}
+.waiting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--brand);
+  font-size: 13px;
+}
+.muted {
+  font-size: 12px;
+  color: #9299a6;
+  line-height: 1.8;
+}
+.shimmer {
+  background: linear-gradient(100deg, #8c96a6 20%, #c9d2df 45%, #536d90 55%, #8c96a6 80%);
+  background-size: 220% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -220% 0;
+  }
+}
+@media (max-width: 1000px) {
+  .streamPanel {
+    position: static;
+  }
+  .streamViewport {
+    max-height: 560px;
+  }
+}
+@media (max-width: 600px) {
+  .chain {
+    padding: 18px 16px;
+  }
+  .runMeta,
+  .streamFooter {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .connection {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shimmer {
+    animation: none;
+  }
+}
