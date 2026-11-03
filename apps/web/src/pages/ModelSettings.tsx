@@ -1,8 +1,9 @@
+import { modelSettingsQueries, invalidateModelSettings } from '../features/model-settings/queries';
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Form, Input, Select } from 'antd';
 import { Link } from 'react-router-dom';
-import { api } from '../api/client';
+import { modelSettingsApi } from '../api/model-settings';
 import type {
   ModelSettings,
   ModelSettingsInput,
@@ -13,8 +14,8 @@ import { ErrorNotice } from '../components/ErrorNotice';
 import styles from '../styles/Workbench.module.css';
 
 export function ModelSettingsPage() {
-  const settings = useQuery({ queryKey: ['model-settings'], queryFn: api.modelSettings });
-  const profiles = useQuery({ queryKey: ['model-profiles'], queryFn: api.modelProfiles });
+  const settings = useQuery(modelSettingsQueries.settings());
+  const profiles = useQuery(modelSettingsQueries.profiles());
   const client = useQueryClient();
   const [selected, setSelected] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -39,11 +40,7 @@ export function ModelSettingsPage() {
     setNotice(null);
   }
   async function reload() {
-    await Promise.all([
-      client.invalidateQueries({ queryKey: ['model-profiles'] }),
-      client.invalidateQueries({ queryKey: ['model-settings'] }),
-      client.invalidateQueries({ queryKey: ['config'] }),
-    ]);
+    await invalidateModelSettings(client);
   }
   async function manage(action: 'activate' | 'delete') {
     if (!profile) return;
@@ -52,8 +49,8 @@ export function ModelSettingsPage() {
     setError(null);
     setNotice(null);
     try {
-      if (action === 'activate') await api.activateModelProfile(profile);
-      else await api.deleteModelProfile(profile);
+      if (action === 'activate') await modelSettingsApi.activateModelProfile(profile);
+      else await modelSettingsApi.deleteModelProfile(profile);
       setDirty(false);
       setDeleting(false);
       if (action === 'delete') setSelected(null);
@@ -238,17 +235,18 @@ function SettingsForm({
       if (action === 'test') {
         setNotice(
           profile || creating
-            ? await api.testModelProfile({ ...payload, name }, profile?.id)
-            : await api.testModelSettings(payload),
+            ? await modelSettingsApi.testModelProfile({ ...payload, name }, profile?.id)
+            : await modelSettingsApi.testModelSettings(payload),
         );
       } else {
         const result =
           profile || creating
-            ? await api.saveModelProfile({ ...payload, name }, profile?.id)
-            : await api.saveModelSettings(payload);
+            ? await modelSettingsApi.saveModelProfile({ ...payload, name }, profile?.id)
+            : await modelSettingsApi.saveModelSettings(payload);
         setSaved(result);
         form.setFieldsValue({ ...result, api_key: '', key_action: 'keep' });
-        if (!('active' in result) || result.active) client.setQueryData(['model-settings'], result);
+        if (!('active' in result) || result.active)
+          client.setQueryData(modelSettingsQueries.settings().queryKey, result);
         await onSaved(result);
       }
     } catch (reason) {

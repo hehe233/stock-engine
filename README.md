@@ -142,7 +142,8 @@ stock-engine/
 │       │   ├── agents/         # LangGraph 状态、节点和图
 │       │   ├── db.py           # 数据库连接与 ORM 模型
 │       │   ├── schemas.py      # 请求 / 响应数据契约
-│       │   ├── worker.py       # 后台采集、任务领取与子进程管理
+│       │   ├── runtime/        # 进程监督、领域执行槽与采集调度
+│       │   ├── worker.py       # 单实例锁、恢复与运行装配
 │       │   └── main.py         # API 生命周期，不执行慢速采集
 │       ├── migrations/        # Alembic 数据库迁移
 │       └── tests/             # 接口和工作流测试
@@ -201,3 +202,9 @@ P3 使用方式、CSV 数据契约、防泄漏规则和成交边界见 [P3 文�
 4. [验证记录](docs/history/verification.md)：测试结果、已修复问题与未验证范围。
 
 默认脚本绑定本机地址。P1 已提供单用户访问密钥、进程内限流和独立任务执行；外网部署仍需 HTTPS 反向代理、SSE 禁用缓冲、SPA fallback，并确认公开数据的再分发权限。
+
+## 运行诊断与持久数据
+
+worker 的进程启动、退出、超时、取消和启动失败写入 `.runtime/worker.stderr.log`，结构化字段为任务类别、任务 ID、结果和退出码，不写模型密钥、完整命令参数或持仓。入口与故障测试见[源码导航](docs/architecture/source-map.md)。
+
+备份须同时保护业务数据库、独立 checkpoint 与 `QUANT_ARTIFACT_DIR` 指向的量化文件；先停止本项目写入进程，再按实际配置备份。SQLite 如存在 WAL/SHM，使用一致性备份或停机确认完成 checkpoint 后复制，不单独拷贝仍在写入的主库文件。`.runtime/` 日志与 PID 可重建，数据库和被引用的产物不是缓存。本轮重构没有搬迁这些目录；未引用产物的处理边界见[量化文档](docs/modules/quant.md)。

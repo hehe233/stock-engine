@@ -1,9 +1,10 @@
+import { reportQueries } from '../features/reports/queries';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Table, Tag } from 'antd';
 import type { TableColumnsType } from 'antd';
 import { Link, useParams } from 'react-router-dom';
-import { api } from '../api/client';
+
 import type { AnalysisReport } from '../api/types';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { formatTime } from '../lib/format';
@@ -11,7 +12,7 @@ import styles from '../styles/Workbench.module.css';
 
 export function ReportsPage() {
   const [page, setPage] = useState(1);
-  const history = useQuery({ queryKey: ['analyses', page], queryFn: () => api.analyses(page) });
+  const history = useQuery(reportQueries.list(page));
   const columns: TableColumnsType<AnalysisReport> = [
     {
       title: '研究对象',
@@ -90,11 +91,7 @@ export function ReportsPage() {
 
 export function ReportPage() {
   const { id = '' } = useParams();
-  const reportQuery = useQuery({
-    queryKey: ['analysis', id],
-    queryFn: () => api.analysis(id),
-    enabled: Boolean(id),
-  });
+  const reportQuery = useQuery({ ...reportQueries.detail(id), enabled: Boolean(id) });
   if (reportQuery.error)
     return <ErrorNotice error={reportQuery.error} retry={() => void reportQuery.refetch()} />;
   if (!reportQuery.data) return <p role="status">正在读取分析报告…</p>;

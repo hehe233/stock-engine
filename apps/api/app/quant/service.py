@@ -1,7 +1,6 @@
 """实验任务持久化协调；HTTP 只入队，独立进程承担训练与回测。"""
 
 import hashlib
-import json
 from pathlib import Path
 from threading import Lock
 from uuid import uuid4
@@ -10,7 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy import func, select, update
 
 from app.db import QuantDataset, QuantRun
-from app.quant.data import artifact_path, load_frame
+from app.quant.artifacts import ArtifactWrite, load_frame
 from app.quant.schemas import ExperimentInput
 from app.shared.time import as_utc, utc_now
 
@@ -148,35 +147,43 @@ def execute_experiment(sessions, settings, identifier):
                 session.commit()
 
         result, predictions, models = train_experiment(frame, params, details, progress)
-        prediction_path = artifact_path(
-            settings, settings.market_provider, identifier, "predictions.parquet"
-        )
-        prediction_path.parent.mkdir(parents=True, exist_ok=True)
-        predictions.to_parquet(prediction_path, index=False)
-        model_path = artifact_path(settings, settings.market_provider, identifier, "models.json")
-        model_path.write_text(
-            json.dumps(models, ensure_ascii=False, allow_nan=False), encoding="utf-8"
-        )
-        code = b"".join(
-            (Path(__file__).parent / name).read_bytes()
-            for name in ("engine.py", "features.py", "backtest.py", "data.py")
-        )
-        result.update(
-            {
-                "dataset_checksum": checksum,
-                "code_sha256": hashlib.sha256(code).hexdigest(),
-                "artifacts": {
-                    p.name: hashlib.sha256(p.read_bytes()).hexdigest()
-                    for p in (prediction_path, model_path)
-                },
+        with ArtifactWrite(settings, settings.market_provider, identifier) as files:
+            artifacts = {
+                "predictions.parquet": files.frame("predictions.parquet", predictions),
+                "models.json": files.models(models),
             }
-        )
-        with sessions() as session:
-            row = session.get(QuantRun, identifier)
-            if row.status == "running":
-                row.status = "cancelled" if row.cancel_requested else "succeeded"
-                row.result, row.updated_at = result, utc_now()
-                session.commit()
+            code = b"".join(
+                (Path(__file__).parent / name).read_bytes()
+                for name in (
+                    "engine.py",
+                    "features.py",
+                    "backtest.py",
+                    "datasets.py",
+                    "artifacts.py",
+                )
+            )
+            result.update(
+                {
+                    "dataset_checksum": checksum,
+                    "code_sha256": hashlib.sha256(code).hexdigest(),
+                    "artifacts": artifacts,
+                }
+            )
+            with sessions() as session:
+                row = session.get(QuantRun, identifier)
+                if row.status == "running":
+                    row.status = "cancelled" if row.cancel_requested else "succeeded"
+                    row.result, row.updated_at = result, utc_now()
+                    try:
+                        session.commit()
+                    except Exception:
+                        files.preserve()
+                        session.rollback()
+                        stored = session.get(QuantRun, identifier)
+                        if stored.result.get("artifacts") != artifacts:
+                            files.discard()
+                        raise
+                    files.preserve()
     except InterruptedError:
         fail_experiment(sessions, identifier, "实验已取消", True)
     except ValueError as exc:

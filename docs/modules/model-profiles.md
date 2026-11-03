@@ -23,7 +23,7 @@
 
 读取列表只返回白名单字段和 `has_api_key`。修改、切换、删除携带版本 revision；版本过期返回 409，已删除返回 404。单进程部署用已有 settings_lock 串行化写操作；新增/修改配置、移动活动指针在一个事务内提交。
 
-阅读顺序：`ModelSettings.tsx` → `api/client.ts` → `model_settings/routes.py` → `model_settings/service.py` → `db.py` → `0005_model_profiles.py`。回归测试见 `test_model_profiles.py`、`test_profile_migration.py` 和 `model-profiles.spec.ts`。
+阅读顺序：`ModelSettings.tsx` → `api/model-settings.ts` / `features/model-settings/queries.ts` → `model_settings/routes.py` → `model_settings/service.py` → `db.py` → `0005_model_profiles.py`。回归测试见 `test_model_profiles.py`、`test_profile_migration.py` 和 `model-profiles.spec.ts`。
 
 ## API
 

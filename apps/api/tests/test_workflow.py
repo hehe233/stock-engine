@@ -124,7 +124,7 @@ def test_score_is_bounded_and_negative_change_has_no_strength_points(client):
 
 
 def test_worker_collection_without_browser_request(client, settings):
-    from app.worker import collect_market
+    from app.runtime.collection import collect_market
 
     first = client.get("/api/market/quotes").json()["snapshot_id"]
     collect_market(client.app.state.sessions, settings, client.app.state.market)

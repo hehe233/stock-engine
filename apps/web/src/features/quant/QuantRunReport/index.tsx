@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { quantQueries, refreshQuantRun, invalidateQuantRuns } from '../queries';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Table } from 'antd';
 import { Link } from 'react-router-dom';
@@ -36,22 +37,22 @@ function MetricsTable({ rows }: { rows: ({ name: string } & Metrics)[] }) {
 export function QuantRunReport({ id }: { id: string }) {
   const client = useQueryClient();
   const [page, setPage] = useState(1);
-  const run = useQuery({
-    queryKey: ['quant-run', id],
-    queryFn: () => quantApi.run(id),
-    refetchInterval: (q) =>
-      q.state.data && ['queued', 'running'].includes(q.state.data.status) ? 2000 : false,
-  });
+  const run = useQuery(quantQueries.run(id));
   const predictions = useQuery({
-    queryKey: ['quant-predictions', id, page],
-    queryFn: () => quantApi.predictions(id, page),
+    ...quantQueries.predictions(id, page),
     enabled: run.data?.status === 'succeeded',
   });
   const cancel = useMutation({
     mutationFn: () => quantApi.cancel(id),
-    onSuccess: () => client.invalidateQueries({ queryKey: ['quant-run', id] }),
+    onSuccess: () => refreshQuantRun(client, id),
   });
   const result = run.data?.result;
+  const status = run.data?.status;
+  useEffect(() => {
+    if (status && ['succeeded', 'failed', 'cancelled'].includes(status)) {
+      void invalidateQuantRuns(client);
+    }
+  }, [client, id, status]);
   return (
     <div className={layout.pageStack}>
       <div className={layout.pageHeading}>

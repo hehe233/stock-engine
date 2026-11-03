@@ -2,7 +2,16 @@ from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
 from app.http.dependencies import SessionDep
-from app.portfolio.schemas import CsvPreview, PositionImport, PositionInput
+from app.portfolio.schemas import (
+    CsvPreview,
+    DeleteResponse,
+    ImportResponse,
+    PortfolioResponse,
+    PositionImport,
+    PositionInput,
+    PreviewResponse,
+    UpdateResponse,
+)
 from app.portfolio.service import (
     CSV_COLUMNS,
     delete_lot,
@@ -15,7 +24,7 @@ from app.portfolio.service import (
 router = APIRouter(prefix="/api")
 
 
-@router.get("/portfolio")
+@router.get("/portfolio", response_model=PortfolioResponse, response_model_exclude_unset=True)
 def holdings(request: Request, session: SessionDep):
     return portfolio_view(session, request.app.state.settings.market_provider)
 
@@ -33,21 +42,27 @@ def holdings_template():
     )
 
 
-@router.post("/portfolio/preview")
+@router.post(
+    "/portfolio/preview", response_model=PreviewResponse, response_model_exclude_unset=True
+)
 def preview_holdings(payload: CsvPreview):
     return preview_csv(payload.content)
 
 
-@router.post("/portfolio/import")
+@router.post("/portfolio/import", response_model=ImportResponse, response_model_exclude_unset=True)
 def import_holdings(payload: PositionImport, request: Request, session: SessionDep):
     return import_lots(session, payload.rows, request.app.state.settings.market_provider)
 
 
-@router.post("/portfolio/{lot_id}/update")
+@router.post(
+    "/portfolio/{lot_id}/update", response_model=UpdateResponse, response_model_exclude_unset=True
+)
 def update_holding(lot_id: str, payload: PositionInput, request: Request, session: SessionDep):
     return update_lot(session, lot_id, payload, request.app.state.settings.market_provider)
 
 
-@router.post("/portfolio/{lot_id}/delete")
+@router.post(
+    "/portfolio/{lot_id}/delete", response_model=DeleteResponse, response_model_exclude_unset=True
+)
 def delete_holding(lot_id: str, request: Request, session: SessionDep):
     return delete_lot(session, lot_id, request.app.state.settings.market_provider)

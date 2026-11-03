@@ -19,7 +19,7 @@
 ## 第一课：沿着一次点击阅读
 
 1. `apps/web/src/pages/Dashboard.tsx`：点击「分析」后，mutation 传入 `symbol` 和当前 `snapshot_id`。
-2. `apps/web/src/api/client.ts`：发送 `POST /api/jobs`，附带分析模式和模型名，得到 202 + job_id。
+2. `apps/web/src/api/jobs.ts`：发送 `POST /api/jobs`，附带分析模式和模型名，得到 202 + job_id。
 3. `apps/api/app/schemas.py`：Pydantic 验证请求格式，不合格返回 422。
 4. `jobs/service.py`：验证快照和模型列表，任务入库。`worker.py` 原子领取任务，启动受超时控制的子进程。
 5. `agents/run_job.py` 打开 checkpointer；`research.py` 计算规则；`assistant.py` 在模型模式下执行「选择工具 → 读取证据 → 再判断 → 结构化输出」。
@@ -113,7 +113,7 @@ SQLAlchemy 的常见顺序是：创建 Session → 查询 / 添加对象 → `co
 
 ## 第十课：数据湖文件、查询引擎与业务数据库
 
-阅读 `quant/data.py`：Parquet 适合批量列式数据，DuckDB 直接对文件执行 SQL，SQLAlchemy 表保存数据版本与任务索引。三者的关系类似「静态资源文件 + 查询执行器 + 业务元数据」，不需要为了学习就引入常驻大数据集群。
+阅读 `quant/datasets.py` 与 `quant/artifacts.py`：Parquet 适合批量列式数据，DuckDB 直接对文件执行 SQL，SQLAlchemy 表保存数据版本与任务索引。三者的关系类似「静态资源文件 + 查询执行器 + 业务元数据」，不需要为了学习就引入常驻大数据集群。
 
 练习：创建数据版本，观察报告中的 SHA-256；在临时测试目录修改文件，运行 `test_hash_change_rejected_and_interruption_recoverable`，理解为什么数据库记录存在还不足以保证实验可复现。
 

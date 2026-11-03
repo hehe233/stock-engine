@@ -1,10 +1,15 @@
+import { invalidateJobs } from '../features/jobs/queries';
+import { marketQueries, invalidateMarketStatus } from '../features/market/queries';
+import { configQueries } from '../features/config/queries';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { Alert, Button, Input, Select, Table, Tag } from 'antd';
 import type { TableColumnsType, TableProps } from 'antd';
 import { Link, useNavigate } from 'react-router-dom';
-import { api } from '../api/client';
+
+import { marketApi } from '../api/market';
+import { jobsApi } from '../api/jobs';
 import type { AnalysisMode, AssetType, Quote } from '../api/types';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { formatAmount, formatChange, formatTime } from '../lib/format';
@@ -21,12 +26,8 @@ export function Dashboard() {
   const [selection, setSelection] = useState('');
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const config = useQuery({ queryKey: ['config'], queryFn: api.config });
-  const status = useQuery({
-    queryKey: ['market-status'],
-    queryFn: api.marketStatus,
-    refetchInterval: 5000,
-  });
+  const config = useQuery(configQueries.current());
+  const status = useQuery({ ...marketQueries.status(), refetchInterval: 5000 });
   const params = new URLSearchParams({
     asset_type: asset,
     page: String(page),
@@ -37,14 +38,12 @@ export function Dashboard() {
   });
   const collecting = status.data?.collection[asset].status === 'running';
   const market = useQuery({
-    // 采集完成后立即读取新的快照，不必再等一个五分钟轮询周期。
-    queryKey: ['market', params.toString(), status.data?.collection[asset].snapshot_id],
-    queryFn: () => api.quotes(params),
+    ...marketQueries.quotes(params, status.data?.collection[asset].snapshot_id),
     refetchInterval: collecting ? 5000 : (config.data?.refresh_interval_seconds ?? 300) * 1000,
   });
   const refresh = useMutation({
-    mutationFn: api.refresh,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['market-status'] }),
+    mutationFn: marketApi.refresh,
+    onSuccess: () => invalidateMarketStatus(queryClient),
   });
   const analyze = useMutation({
     mutationFn: ({
@@ -57,9 +56,9 @@ export function Dashboard() {
       snapshotId: string;
       mode: AnalysisMode;
       model?: string;
-    }) => api.createJob(symbol, snapshotId, mode, model),
+    }) => jobsApi.createJob(symbol, snapshotId, mode, model),
     onSuccess: (job) => {
-      void queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      void invalidateJobs(queryClient);
       void navigate(`/jobs/${job.id}`);
     },
   });

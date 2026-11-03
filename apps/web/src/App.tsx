@@ -1,3 +1,4 @@
+import { jobQueries } from './features/jobs/queries';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Drawer } from 'antd';
@@ -16,7 +17,7 @@ import {
   CompassOutlined,
   RightOutlined,
 } from '@ant-design/icons';
-import { api } from './api/client';
+
 import { IconParkFont } from './components/agent/IconParkFont';
 import styles from './styles/AppShell.module.css';
 
@@ -102,12 +103,7 @@ export function App() {
   const focusFrame = useRef(0);
   const main = useRef<HTMLElement>(null);
   const drag = useRef<{ x: number; width: number; next: number } | null>(null);
-  const jobs = useQuery({
-    queryKey: ['jobs'],
-    queryFn: api.jobs,
-    refetchInterval: 15000,
-    retry: false,
-  });
+  const jobs = useQuery({ ...jobQueries.list(), refetchInterval: 15000, retry: false });
   const activeRoute = groups
     .flatMap((group) => group.items)
     .find((item) =>

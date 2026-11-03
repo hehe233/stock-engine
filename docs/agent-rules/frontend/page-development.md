@@ -11,8 +11,8 @@
 
 ## 请求与状态
 
-1. 普通 JSON 请求在 `api/client.ts`、`api/research.ts` 或 `api/quant.ts` 扩展，通过已有 `request` 统一错误与超时处理；同步维护前端类型和后端 schema。
-2. 服务端状态使用 TanStack Query，query key 包含影响返回值的筛选、分页和实体 ID。mutation 成功后失效对应缓存，避免为局部操作刷新全部数据。
+1. 普通 JSON 请求在 `api/` 对应领域文件扩展，通过 `api/http.ts` 的 `request` 统一前缀、错误与超时处理；同步维护前端类型和后端响应 schema。
+2. 服务端状态使用 TanStack Query；query options、key 与跨视图失效规则统一放在 `features/<领域>/queries.ts`，页面调用领域 helper。key 包含筛选、分页和实体 ID；变更同时检查列表、详情及关联视图。缓存行为回归使用 `e2e/query-contracts.spec.ts`。
 3. 输入草稿、筛选和展示开关留在组件；需要持久化的界面偏好沿用已有模式，浏览器存储失败不能阻断研究流程。
 4. SSE 通过 `components/agent/useJobStream.ts`，不为同一任务另起轮询/事件实现；订阅、计时器和监听器有清理路径。
 5. 认证通过现有后端 cookie 与 `AuthGate` 流程；模型密钥只提交给后端设置接口，不进入前端持久化或构建变量。

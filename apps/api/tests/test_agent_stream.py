@@ -1,14 +1,15 @@
 """Exercise real model SSE, graph persistence and replay without external model calls."""
 
 import json
+from pathlib import Path
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.agents.models import ChatOpenAI
 from app.agents.run_job import execute_job
-from app.db import JobEvent
+from app.db import JobEvent, ResearchJob
 from app.jobs.service import claim_job, finish_failed
 
 
@@ -175,3 +176,35 @@ def test_invalid_or_truncated_stream_keeps_draft_but_never_saves_report(
     assert client.get(f"/api/analyses/{job['id']}").status_code == 404
     assert client.get(f"/api/jobs/{job['id']}").json()["status"] == "failed"
     assert any(e.kind == "report.delta" for e in read_events(client, job["id"]))
+
+
+def test_shared_replay_contract_preserves_payload_order_and_resume_cursor(client, settings):
+    fixture = json.loads(
+        (Path(__file__).resolve().parents[3] / "tests/fixtures/agent-replay.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    job, _ = submit_and_claim(client, settings)
+    with client.app.state.sessions() as session:
+        session.execute(delete(JobEvent).where(JobEvent.job_id == job["id"]))
+        for event in fixture["events"]:
+            session.add(JobEvent(job_id=job["id"], kind=event["kind"], payload=event["payload"]))
+        row = session.get(ResearchJob, job["id"])
+        row.status, row.attempts = "succeeded", 2
+        session.commit()
+    replay = client.get(f"/api/jobs/{job['id']}/events").text
+    records = [
+        json.loads(line[6:])
+        for line in replay.splitlines()
+        if line.startswith("data: ") and '"id"' in line
+    ]
+    assert [{"kind": event["kind"], "payload": event["payload"]} for event in records] == fixture[
+        "events"
+    ]
+    assert replay.rstrip().endswith('data: {"status": "succeeded"}')
+    resumed = client.get(
+        f"/api/jobs/{job['id']}/events?after={records[2]['id']}",
+        headers={"Last-Event-ID": str(records[6]["id"])},
+    ).text
+    ids = [int(line[4:]) for line in resumed.splitlines() if line.startswith("id: ")]
+    assert ids == [event["id"] for event in records[7:]]

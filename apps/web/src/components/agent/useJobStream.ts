@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { JobEvent } from '../../api/types';
+import { refreshJob } from '../../features/jobs/queries';
 
 export function useJobStream(id: string, attempt?: number) {
   const [events, setEvents] = useState<JobEvent[]>([]);
@@ -15,6 +16,7 @@ export function useJobStream(id: string, attempt?: number) {
       `/api/jobs/${encodeURIComponent(id)}/events?after=${cursor.current}`,
     );
     let pending: JobEvent[] = [];
+    let terminalRefreshed = false;
     const flush = () => {
       if (!pending.length) return;
       const batch = pending;
@@ -33,8 +35,12 @@ export function useJobStream(id: string, attempt?: number) {
         pending.push(item);
         setConnection('live');
         // Token deltas do not trigger a separate HTTP request for every character.
-        if (['running', 'succeeded', 'failed', 'cancelled'].includes(item.kind)) {
-          void client.invalidateQueries({ queryKey: ['job', id] });
+        if (item.kind === 'running') {
+          terminalRefreshed = false;
+          void refreshJob(client, id);
+        } else if (['succeeded', 'failed', 'cancelled'].includes(item.kind)) {
+          terminalRefreshed = true;
+          void refreshJob(client, id, true);
         }
       } catch {
         setConnection('reconnecting');
@@ -44,7 +50,7 @@ export function useJobStream(id: string, attempt?: number) {
       flush();
       stream.close();
       setConnection('done');
-      void client.invalidateQueries({ queryKey: ['job', id] });
+      if (!terminalRefreshed) void refreshJob(client, id, true);
     });
     stream.onerror = () => setConnection('reconnecting');
     return () => {

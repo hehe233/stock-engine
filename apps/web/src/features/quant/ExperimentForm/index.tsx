@@ -1,3 +1,4 @@
+import { invalidateQuantRuns } from '../queries';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button, Form, InputNumber } from 'antd';
 import { useNavigate } from 'react-router-dom';
@@ -27,7 +28,7 @@ export function ExperimentForm({ selection }: { selection?: string }) {
   const create = useMutation({
     mutationFn: quantApi.create,
     onSuccess: (run) => {
-      void client.invalidateQueries({ queryKey: ['quant-runs'] });
+      void invalidateQuantRuns(client);
       void navigate('/quant/' + run.id);
     },
   });

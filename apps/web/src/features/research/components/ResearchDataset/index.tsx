@@ -1,3 +1,4 @@
+import { researchQueries, invalidateResearch } from '../../queries';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Input, Table, Tag } from 'antd';
@@ -20,15 +21,10 @@ export function ResearchDataset({ query }: { query: ResearchQuery }) {
   const [page, setPage] = useState(1);
   const [seat, setSeat] = useState<string | null>(null);
   const client = useQueryClient();
-  const data = useQuery({
-    queryKey: ['research', query, search, page],
-    queryFn: () => researchApi.data(query, search, page),
-    refetchInterval: (q) =>
-      ['queued', 'running'].includes(q.state.data?.request?.status ?? '') ? 5000 : 300000,
-  });
+  const data = useQuery(researchQueries.data(query, search, page));
   const refresh = useMutation({
     mutationFn: () => researchApi.refresh(query),
-    onSuccess: () => client.invalidateQueries({ queryKey: ['research'] }),
+    onSuccess: () => invalidateResearch(client),
   });
   const pending =
     refresh.isPending || ['queued', 'running'].includes(data.data?.request?.status ?? '');

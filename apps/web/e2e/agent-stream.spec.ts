@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import type { AnalysisReport, JobEvent, ResearchJob } from '../src/api/types';
 
 declare global {
@@ -12,6 +13,9 @@ declare global {
 }
 
 const jobId = 'stream-test';
+const replayFixture = JSON.parse(
+  readFileSync(new URL('../../../tests/fixtures/agent-replay.json', import.meta.url), 'utf8'),
+);
 const timestamp = new Date().toISOString();
 const summary = '样本活跃程度较高，但现有证据不能推断连板概率。';
 const factors = [
@@ -348,4 +352,33 @@ test('reconnection deduplicates deltas and retry retains interrupted history', a
   await expect(page.getByText('正在思考', { exact: true })).toHaveCount(1);
   await page.getByRole('button', { name: '取消任务', exact: true }).click();
   await expect(page.getByRole('button', { name: '取消处理中' })).toBeDisabled();
+});
+
+test('shared persisted replay deduplicates events and archives the final report', async ({
+  page,
+}) => {
+  const app = await setup(page);
+  await page.goto(`/jobs/${jobId}`);
+  const events: JobEvent[] = replayFixture.events.map((event: Pick<JobEvent, 'kind' | 'payload'>) =>
+    app.make(event.kind, event.payload),
+  );
+  app.status('succeeded');
+  // Reconnect can redeliver the last persisted event. The hook owns cursor deduplication.
+  await app.emit(...events.slice(0, 9), events[8], ...events.slice(9));
+  await expect(page.getByText('核验来源。', { exact: true })).toHaveCount(1);
+  await expect(page.getByText('旧草稿', { exact: true })).toHaveCount(1);
+  await expect(page.getByText('已中断', { exact: true })).toHaveCount(1);
+  await expect(page.getByRole('link', { name: '打开完整报告 →' })).toBeVisible();
+  const reads = app.reads();
+  await page.evaluate(() =>
+    window.agentTestStreams
+      .filter((s) => !s.closed)
+      .at(-1)
+      ?.dispatchEvent(new MessageEvent('done')),
+  );
+  // Terminal progress already refreshed the job; done only drains and closes the stream.
+  await expect
+    .poll(() => page.evaluate(() => window.agentTestStreams.filter((s) => !s.closed).length))
+    .toBe(0);
+  expect(app.reads()).toBe(reads);
 });

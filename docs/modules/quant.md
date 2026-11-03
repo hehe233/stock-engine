@@ -93,10 +93,18 @@ Parquet 文件保存日线和样本外预测；DuckDB 使用参数绑定读取�
 | GET `/runs/{id}/artifacts/models.json`          | 各折模型文本与校准系数              |
 | GET `/runs/{id}/artifacts/predictions.parquet`  | 全部样本外预测                      |
 
-阅读：`pages/Quant/index.tsx` / `pages/QuantRun/index.tsx` → `features/quant/` → `api/quant.ts` → `quant/routes.py` → `quant/data.py` → `quant/features.py` → `quant/engine.py` → `quant/backtest.py` → `quant/service.py` 与 `worker.py`。防泄漏、撮合和端到端回归在 `tests/test_quant.py` 与 `e2e/quant.spec.ts`。
+阅读：`pages/Quant/index.tsx` / `pages/QuantRun/index.tsx` → `features/quant/` → `api/quant.ts` → `quant/routes.py` → `quant/datasets.py` / `quant/artifacts.py` → `quant/features.py` → `quant/engine.py` → `quant/backtest.py` → `quant/service.py` 与 `worker.py`。防泄漏、撮合和端到端回归在 `tests/test_quant.py` 与 `e2e/quant.spec.ts`。
 
 ## 尚未完成的生产能力
 
 全市场历史证券成分/退市覆盖核验、时点数据版本修订、完整公司行动收益处理、独立最终盲测、概率上线门槛与持续漂移监测、完整撮合账本、Level-2 授权接入和实盘执行。当前完成的是可运行、可审计的 P3 研究验证版，不以免费精选数据宣称上述能力已经完成。
 
 任务证据通过 `quant/evidence.py` 读取符合证券、模式和截止时点的实验摘要，再由 `jobs/context.py` 组合。归档历史导入通过 `research/queries.py` 读取；量化模块不直接读取 ResearchSnapshot。
+
+### 产物发布与故障边界
+
+数据集与实验继续使用原有 `quant_artifact_dir/<模式>/<UUID>/` 布局。新版本先写同目录临时文件，再原子替换单个文件；所有必要文件完成且元数据提交后才发布结果。下载和预测分页共用模式、成功状态和完整 SHA-256 校验，哈希计算以流读取，分页仍执行固定 SQL 与参数绑定。
+
+可捕获的写入/提交异常会清理本次未引用版本；数据库提交返回异常时先核实持久化结果，已引用或无法确认的版本保留，避免删掉已提交数据。已有版本目录禁止覆盖。进程强杀或断电可能留下未引用目录，本次没有后台垃圾回收；核实数据库引用前不可按目录时间批量删除。
+
+训练进程中断仍标记失败并由用户重跑；Agent 的检查点恢复不适用于量化。这里只改变职责与故障保护，不改变标签、校准、交易模拟或研究验证口径。

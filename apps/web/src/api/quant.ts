@@ -1,6 +1,8 @@
-import { request } from './client';
+import { request } from './http';
 
 export interface DatasetAudit {
+  level2?: boolean;
+  snapshot_ids?: string[];
   rows: number;
   symbol_count: number;
   days: number;
@@ -38,6 +40,9 @@ export interface DatasetInput {
   content: string;
 }
 export interface ExperimentInput {
+  horizon?: 5;
+  event_return?: 0.2;
+  seed?: number;
   dataset_id: string;
   train_days: number;
   calibration_days: number;
@@ -110,6 +115,9 @@ export interface Backtest {
   warnings?: string[];
 }
 export interface QuantResult {
+  artifacts?: Record<string, string>;
+  evaluation_end?: string;
+  research_only?: boolean;
   stage?: string;
   target?: string;
   metrics?: Metrics;
@@ -134,7 +142,7 @@ export interface QuantRun {
   id: string;
   dataset_id: string;
   status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled';
-  params: ExperimentInput;
+  params: Required<ExperimentInput>;
   result: QuantResult;
   error: string | null;
   is_demo: boolean;
@@ -143,6 +151,7 @@ export interface QuantRun {
   cancel_requested: boolean;
 }
 export interface Prediction {
+  baseline_probability?: number;
   symbol: string;
   date: string;
   label_end: string;

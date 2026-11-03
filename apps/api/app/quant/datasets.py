@@ -1,16 +1,14 @@
 """不可变 Parquet 数据版本与 DuckDB 查询。所有文件名由服务端 UUID 生成。"""
 
-import hashlib
 import io
-from pathlib import Path
 from uuid import uuid4
 
-import duckdb
 import numpy as np
 import pandas as pd
 from fastapi import HTTPException
 
 from app.db import QuantDataset
+from app.quant.artifacts import ArtifactWrite
 from app.research.queries import archived_history
 from app.shared.securities import normalize_symbol
 from app.shared.time import SHANGHAI, as_utc, utc_now
@@ -27,20 +25,6 @@ OPTIONAL = [
     "delisted_on",
 ]
 NUMERIC = ["open", "high", "low", "close", "volume", "prev_close", "upper_limit", "lower_limit"]
-
-
-def artifact_path(settings, mode, identifier, filename):
-    # identifier 只由数据库记录提供；公开接口不接受文件路径或任意下载文件名。
-    from uuid import UUID
-
-    UUID(identifier)
-    if mode not in {"public", "demo"} or filename not in {
-        "bars.parquet",
-        "predictions.parquet",
-        "models.json",
-    }:
-        raise ValueError("无效实验文件")
-    return Path(settings.quant_artifact_dir).resolve() / mode / identifier / filename
 
 
 def validate_frame(frame, mode):
@@ -191,24 +175,29 @@ def audit_frame(frame, adjustment, selection):
 
 def store_dataset(session, settings, frame, name, source, adjustment, selection, extra=None):
     identifier = str(uuid4())
-    path = artifact_path(settings, settings.market_provider, identifier, "bars.parquet")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_suffix(".tmp")
-    frame.to_parquet(temp, index=False)
-    temp.replace(path)
-    checksum = hashlib.sha256(path.read_bytes()).hexdigest()
-    details = {**audit_frame(frame, adjustment, selection), **(extra or {})}
-    row = QuantDataset(
-        id=identifier,
-        mode=settings.market_provider,
-        name=name,
-        source=source,
-        checksum=checksum,
-        details=details,
-    )
-    session.add(row)
-    session.commit()
-    return dataset_view(row)
+    with ArtifactWrite(settings, settings.market_provider, identifier) as files:
+        digest = files.frame("bars.parquet", frame)
+        details = {**audit_frame(frame, adjustment, selection), **(extra or {})}
+        row = QuantDataset(
+            id=identifier,
+            mode=settings.market_provider,
+            name=name,
+            source=source,
+            checksum=digest,
+            details=details,
+        )
+        session.add(row)
+        try:
+            session.commit()
+        except Exception:
+            # A commit error can be ambiguous. Never remove a durably referenced version.
+            files.preserve()
+            session.rollback()
+            if session.get(QuantDataset, identifier) is None:
+                files.discard()
+            raise
+        files.preserve()
+        return dataset_view(row)
 
 
 def dataset_view(row):
@@ -221,19 +210,6 @@ def dataset_view(row):
         "created_at": as_utc(row.created_at),
         "details": row.details,
     }
-
-
-def load_frame(settings, row):
-    path = artifact_path(settings, row.mode, row.id, "bars.parquet")
-    if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != row.checksum:
-        raise ValueError("数据文件缺失或哈希不匹配，请重新导入；拒绝使用变更后的数据")
-    with duckdb.connect(config={"threads": 1}) as db:
-        # 参数绑定文件路径；不会拼接客户端 SQL、筛选表达式或表名。
-        return (
-            db.execute("SELECT * FROM read_parquet(?) ORDER BY symbol, date", [str(path)])
-            .to_arrow_table()
-            .to_pandas()
-        )
 
 
 def import_history(session, settings):

@@ -2,6 +2,22 @@
 
 [返回历史索引](README.md)
 
+## 重构 P2：请求缓存、响应契约、进程监督与量化产物（2026-11-03）
+
+- 前端传输集中在 `api/http.ts`，原 client 的业务方法按领域拆分，持仓 API 独立；`features/<领域>/queries.ts` 集中 query options、key 与跨视图失效。保持既有 `/api`、超时、cookie 默认行为和 key 形状。任务终态同步报告，done 避免重复刷新；持仓创建任务也刷新最近任务列表。
+- 研究、持仓与量化路由增加显式响应模型；保留 Decimal 成本字符串、未知值 null、未提供字段省略和版本扩展证据。前端补齐分页、更新时间、交易日历、量化固定参数及产物字段。OpenAPI 新增响应模型是本轮有意变更，HTTP 路径、表结构和持久目录不变。
+- worker 保留单实例锁与恢复入口，进程机制/Agent 执行槽/量化执行槽/采集调度迁入 runtime。Agent 继续租约和 checkpoint 恢复，量化中断仍失败；启动异常可记录状态后继续服务。安全进程日志只含类别、任务 ID、结果及退出码。
+- quant/datasets 管输入/审计/版本，artifacts 管固定路径、流式完整哈希、DuckDB 分页、临时文件替换及失败清理。已有版本不覆盖；提交报错先确认是否已持久化，保留已引用或无法确认的文件。不可捕获的强杀/断电仍可能遗留孤儿目录，本轮未实现垃圾回收。
+- 在 `apps/api` 执行 `uv run pytest -q`：**119 passed，105.67 秒**。随后增加 2 项实验元数据提交失败/已提交但返回异常用例，执行 `uv run pytest tests/test_artifact_publication.py -q`：**8 passed，10.75 秒**。全量结果对应新增这两项之前；后续只加测试与前端刷新调用，没有修改后端业务实现。进程监督包含 14 项取消、超时、异常退出、成功不覆写、租约丢失、启动失败和退出回收测试，其中 1 项真实子进程回收；其余使用受控子进程。最后 `uv run ruff check .` 通过。
+- 根目录 `pnpm typecheck`、全部本次 TS/TSX 源码与 E2E 的 ESLint 通过。首次新增 QueryClient 测试使用不匹配的占位类型导致类型检查及构建失败，改为通用 QueryKey 后通过；没有放宽业务请求类型。uv 缓存和 ESLint 依赖读取遇到沙箱拒绝，在获准的当前用户环境完成检查；依赖与锁文件没有改动。
+- `scripts/start-dev.ps1 -Demo` 启动隔离演示库，`pnpm test:e2e`：**30 passed，2.6 分钟**（23 项浏览器流程 + 7 项 Playwright 执行的 HTTP/QueryClient/投影测试）。包含真实演示训练、校准/回测报告、产物下载、CSV、预测分页、持仓、模型配置、行情、导航、错误重试、窄屏和 SSE。根目录 `tests/fixtures/agent-replay.json` 同时用于后端持久事件续传、前端投影及浏览器重复回放/重试草稿/最终报告测试；原有 >100 条事件分页排空测试保留。
+- 最后补齐持仓创建任务的列表失效后，再执行 `playwright test e2e/p2.spec.ts --grep 'portfolio saves'` 复测该入口；结果见下方最终补记。本次截图保存在 `.runtime/agent-stream-desktop.png`、`agent-stream-mobile.png`、`p3-report.png`、`p3-mobile.png` 等。
+- 最终 `scripts/build-web.ps1` 的 `.runtime/build.exit-code` 为 **0**；包含 tsc 与 Vite，22.95 秒完成 Vite 构建。主 JS 约 1,359.51 kB（gzip 438.30 kB），仍有超过 500 kB 的 chunk 提示；本轮不宣称加载性能提升，进一步拆包应基于加载测量。
+- 修改前源码备份为 `.runtime/p2-before-20261103-172629/`，185 项文件及哈希清单。已同步源码导航、领域模块、开发规则、README 和重构方案中的 P2/P3；历史 P1 描述保留当时文件名。Git 差异与文档检查结果见最终补记；没有暂存或提交。
+- 演示环境的 Agent/quant 子进程实际退出码均为 0，worker 日志已检查。服务使用登记 PID/启动时间清理；8000 PID 11236 属于其他工作，保留。未访问真实行情源或付费模型，未运行 PostgreSQL 集成、断电/fsync 故障或性能基准；本轮未修改 Less 编译规则，因此没有重复 P0 HMR 隔离测试。
+
+最终补记：持仓入口专项复测 **1 passed，19.7 秒**；最终代码的生产构建（含 tsc）退出码 0，持仓文件 ESLint 与格式复检通过。改动的 12 份 Markdown、35 份前端/夹具文件格式检查通过；README、AGENTS 与 docs 的 **271 个本地链接目标**存在。`git diff --check` 通过，只有仓库 autocrlf 换行提示；已核对新增文件，未暂存或提交。已查看窄屏量化报告截图。再次停止本次 API/worker/web 登记进程树，8001/5173 已释放；8000 的外部占用在收尾时已变为 PID 42924，未终止。
+
 ## 重构 P1：业务模块、事务与冻结证据（2026-11-03）
 
 - 前端将 Quant/QuantRun、Research/History 迁为目录页面；量化拆出 QuantWorkspace、DatasetImportPanel、ExperimentForm、DatasetAudit、QuantRunReport 与 BacktestReport，研究共享 ResearchDataset 与 SourceNotice。可视模块采用 `index.tsx + index.less`，共同布局继续导入 Workbench CSS Module。Quant 两个路由分别懒加载；页面不再互相导入实现。

@@ -1,3 +1,4 @@
+import { researchQueries, invalidateResearch } from '../../features/research/queries';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Table, Tag } from 'antd';
@@ -27,20 +28,13 @@ function WindowCell({ value }: { value: WindowStats | null | undefined }) {
 export function HistoryPage() {
   const client = useQueryClient();
   const [selected, setSelected] = useState<HistoryCase | null>(null);
-  const history = useQuery({
-    queryKey: ['history'],
-    queryFn: researchApi.history,
-    refetchInterval: (q) =>
-      q.state.data?.items.some((item) => ['queued', 'running'].includes(item.request?.status ?? ''))
-        ? 5000
-        : 300000,
-  });
+  const history = useQuery(researchQueries.history());
   const collect = useMutation({
     mutationFn: async (items: HistoryCase[]) => {
       for (const item of items)
         await researchApi.refresh({ kind: 'history', date: item.end, case_id: item.id });
     },
-    onSuccess: () => client.invalidateQueries({ queryKey: ['history'] }),
+    onSuccess: () => invalidateResearch(client),
   });
   const columns: TableColumnsType<HistoryCase> = [
     { title: '年度', dataIndex: 'year', width: 75 },

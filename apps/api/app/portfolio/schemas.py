@@ -38,3 +38,74 @@ class PositionImport(BaseModel):
 
 class CsvPreview(BaseModel):
     content: str = Field(min_length=1, max_length=200_000)
+
+
+class PositionRecord(BaseModel):
+    # Output is independent of today's input validation (e.g. date constraints).
+    symbol: str
+    name: str
+    asset_type: Literal["stock", "etf"]
+    quantity: int
+    cost_price: str
+    acquired_on: str
+    settlement: Literal["T0", "T1", "unknown"]
+    note: str
+
+
+class PositionResponse(PositionRecord):
+    id: str
+    updated_at: str
+    price: float | None
+    cost_yuan: float
+    value_yuan: float | None
+    pnl_yuan: float | None
+    pnl_pct: float | None
+    sellable: int | None
+    conditions: list[str]
+    quote_time: str | None
+    quote_snapshot_id: str | None
+    fetched_at: str | None
+    weight_pct: float | None
+
+
+class MarketSessionResponse(BaseModel):
+    code: Literal["unknown", "closed", "auction", "trading", "break"]
+    label: str
+    calendar_verified: bool
+
+
+class PortfolioResponse(BaseModel):
+    items: list[PositionResponse]
+    is_demo: bool
+    as_of: str
+    session: MarketSessionResponse
+    unknown_price_count: int
+    cost_yuan: float
+    known_value_yuan: float
+    pnl_yuan: float | None
+    warnings: list[str]
+
+
+class PreviewError(BaseModel):
+    line: int
+    message: str
+
+
+class PreviewResponse(BaseModel):
+    rows: list[PositionRecord]
+    errors: list[PreviewError]
+    valid: bool
+    count: int
+
+
+class ImportResponse(BaseModel):
+    inserted: int
+    skipped: int
+
+
+class UpdateResponse(BaseModel):
+    updated: bool
+
+
+class DeleteResponse(BaseModel):
+    deleted: bool

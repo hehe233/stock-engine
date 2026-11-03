@@ -1,11 +1,16 @@
+import { configQueries } from '../features/config/queries';
+import { invalidateJobs } from '../features/jobs/queries';
+import { portfolioQueries, invalidatePortfolio } from '../features/portfolio/queries';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Form, Input, InputNumber, Select, Table } from 'antd';
 import type { TableColumnsType } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../api/client';
-import { researchApi, shanghaiToday } from '../api/research';
-import type { ImportPreview, Position, PositionInput } from '../api/research';
+
+import { jobsApi } from '../api/jobs';
+import { portfolioApi } from '../api/portfolio';
+import { shanghaiToday } from '../api/research';
+import type { ImportPreview, Position, PositionInput } from '../api/portfolio';
 import type { AnalysisMode } from '../api/types';
 import { ErrorNotice } from '../components/ErrorNotice';
 import { formatTime } from '../lib/format';
@@ -34,17 +39,13 @@ export function PortfolioPage() {
   const [reading, setReading] = useState(false);
   const client = useQueryClient(),
     navigate = useNavigate();
-  const data = useQuery({
-    queryKey: ['portfolio'],
-    queryFn: researchApi.portfolio,
-    refetchInterval: 300000,
-  });
-  const config = useQuery({ queryKey: ['config'], queryFn: api.config });
-  const invalidate = () => client.invalidateQueries({ queryKey: ['portfolio'] });
+  const data = useQuery({ ...portfolioQueries.current(), refetchInterval: 300000 });
+  const config = useQuery(configQueries.current());
+  const invalidate = () => invalidatePortfolio(client);
   const save = useMutation({
     mutationFn: async (row: PositionInput) => {
-      if (editing) await researchApi.update(editing, row);
-      else await researchApi.import([row]);
+      if (editing) await portfolioApi.update(editing, row);
+      else await portfolioApi.import([row]);
     },
     onSuccess: () => {
       setEditing(null);
@@ -53,14 +54,14 @@ export function PortfolioPage() {
     },
   });
   const load = useMutation({
-    mutationFn: researchApi.import,
+    mutationFn: portfolioApi.import,
     onSuccess: () => {
       setPreview(null);
       void invalidate();
     },
   });
   const remove = useMutation({
-    mutationFn: researchApi.remove,
+    mutationFn: portfolioApi.remove,
     onSuccess: () => {
       setRemoving(null);
       void invalidate();
@@ -75,7 +76,7 @@ export function PortfolioPage() {
     mutationFn: (row: Position) => {
       const split = choice.indexOf(':');
       const mode = (split < 0 ? 'rules' : choice.slice(0, split)) as AnalysisMode;
-      return api.createJob(
+      return jobsApi.createJob(
         row.symbol,
         row.quote_snapshot_id!,
         mode,
@@ -84,6 +85,7 @@ export function PortfolioPage() {
       );
     },
     onSuccess: (job) => {
+      void invalidateJobs(client);
       void navigate('/jobs/' + job.id);
     },
   });
@@ -97,7 +99,7 @@ export function PortfolioPage() {
     }
     setReading(true);
     try {
-      setPreview(await researchApi.preview(await file.text()));
+      setPreview(await portfolioApi.preview(await file.text()));
     } catch (error) {
       setFileError(error instanceof Error ? error : new Error('文件读取失败'));
     } finally {

@@ -1,4 +1,4 @@
-import { request } from './client';
+import { request } from './http';
 
 export type ResearchKind = 'ladder' | 'dragon' | 'seats' | 'flow' | 'notices' | 'history';
 export interface ResearchQuery {
@@ -63,6 +63,8 @@ export interface ResearchSnapshot {
   };
 }
 export interface Dataset {
+  page: number;
+  page_size: number;
   snapshot: ResearchSnapshot | null;
   request: DataRequest | null;
   total: number;
@@ -107,47 +109,6 @@ export interface HistoryCase {
     last_date: string | null;
   } | null;
 }
-export interface PositionInput {
-  symbol: string;
-  name: string;
-  asset_type: 'stock' | 'etf';
-  quantity: number;
-  cost_price: string;
-  acquired_on: string;
-  settlement: 'T0' | 'T1' | 'unknown';
-  note: string;
-}
-export interface Position extends PositionInput {
-  id: string;
-  price: number | null;
-  value_yuan: number | null;
-  cost_yuan: number;
-  pnl_yuan: number | null;
-  pnl_pct: number | null;
-  sellable: number | null;
-  conditions: string[];
-  quote_snapshot_id: string | null;
-  quote_time: string | null;
-  fetched_at: string | null;
-  weight_pct: number | null;
-}
-export interface Portfolio {
-  items: Position[];
-  is_demo: boolean;
-  as_of: string;
-  unknown_price_count: number;
-  cost_yuan: number;
-  known_value_yuan: number;
-  pnl_yuan: number | null;
-  session: { label: string };
-  warnings: string[];
-}
-export interface ImportPreview {
-  rows: PositionInput[];
-  errors: { line: number; message: string }[];
-  valid: boolean;
-  count: number;
-}
 export const shanghaiToday = () =>
   new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Shanghai',
@@ -170,11 +131,4 @@ export const researchApi = {
     ),
   refresh: (query: ResearchQuery) => post<DataRequest>('/research/refresh', query),
   history: () => request<{ items: HistoryCase[]; warnings: string[] }>('/research/history'),
-  portfolio: () => request<Portfolio>('/portfolio'),
-  preview: (content: string) => post<ImportPreview>('/portfolio/preview', { content }),
-  import: (rows: PositionInput[]) =>
-    post<{ inserted: number; skipped: number }>('/portfolio/import', { rows }),
-  update: (id: string, row: PositionInput) =>
-    post<{ updated: boolean }>(`/portfolio/${id}/update`, row),
-  remove: (id: string) => post<{ deleted: boolean }>(`/portfolio/${id}/delete`, {}),
 };

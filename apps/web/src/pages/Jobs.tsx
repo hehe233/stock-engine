@@ -1,9 +1,12 @@
+import { reportQueries } from '../features/reports/queries';
+import { jobQueries, jobUpdated } from '../features/jobs/queries';
 import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Table, Tag } from 'antd';
 import type { TableColumnsType } from 'antd';
 import { Link, useParams } from 'react-router-dom';
-import { api } from '../api/client';
+
+import { jobsApi } from '../api/jobs';
 import type { ResearchJob } from '../api/types';
 import { AgentStream } from '../components/agent/AgentStream';
 import { ReportWorkspace } from '../components/agent/ReportWorkspace';
@@ -22,7 +25,7 @@ const labels = {
 };
 
 export function JobsPage() {
-  const jobs = useQuery({ queryKey: ['jobs'], queryFn: api.jobs, refetchInterval: 5000 });
+  const jobs = useQuery({ ...jobQueries.list(), refetchInterval: 5000 });
   const columns: TableColumnsType<ResearchJob> = [
     { title: '证券', dataIndex: 'symbol' },
     { title: '模式 / 模型', key: 'model', render: (_, job) => job.model_name ?? '规则分析' },
@@ -67,27 +70,22 @@ export function JobPage() {
 function JobDetail({ id }: { id: string }) {
   const client = useQueryClient();
   const job = useQuery({
-    queryKey: ['job', id],
-    queryFn: () => api.job(id),
+    ...jobQueries.detail(id),
     refetchInterval: (query) =>
       ['succeeded', 'failed', 'cancelled'].includes(query.state.data?.status ?? '') ? false : 3000,
   });
   const retry = useMutation({
-    mutationFn: () => api.retryJob(id),
-    onSuccess: (data) => client.setQueryData(['job', id], data),
+    mutationFn: () => jobsApi.retryJob(id),
+    onSuccess: (data) => jobUpdated(client, data),
   });
   const cancel = useMutation({
-    mutationFn: () => api.cancelJob(id),
-    onSuccess: (data) => client.setQueryData(['job', id], data),
+    mutationFn: () => jobsApi.cancelJob(id),
+    onSuccess: (data) => jobUpdated(client, data),
   });
   const { events, connection } = useJobStream(id, job.data?.attempts);
   const { preview } = useMemo(() => projectEvents(events), [events]);
   const reportId = job.data?.report_id;
-  const report = useQuery({
-    queryKey: ['analysis', reportId],
-    queryFn: () => api.analysis(reportId!),
-    enabled: Boolean(reportId),
-  });
+  const report = useQuery({ ...reportQueries.detail(reportId), enabled: Boolean(reportId) });
   if (job.error) return <ErrorNotice error={job.error} retry={() => void job.refetch()} />;
   if (!job.data) return <p role="status">正在读取任务…</p>;
   const current = job.data;

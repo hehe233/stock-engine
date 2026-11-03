@@ -8,8 +8,9 @@ from fastapi.testclient import TestClient
 from app.db import QuantRun
 from app.jobs.context import frozen_context
 from app.main import create_app
+from app.quant.artifacts import artifact_path
 from app.quant.backtest import simulate
-from app.quant.data import artifact_path, demo_frame, parse_csv
+from app.quant.datasets import demo_frame, parse_csv
 from app.quant.features import FEATURES, build_features, time_folds
 from app.quant.schemas import ExperimentInput
 from app.quant.service import claim_experiment, execute_experiment, recover_experiments

@@ -1,8 +1,10 @@
+import { configQueries } from '../../config/queries';
+import { quantQueries, invalidateQuantDatasets } from '../queries';
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Select, Table, Tag } from 'antd';
 import { Link } from 'react-router-dom';
-import { api } from '../../../api/client';
+
 import { quantApi } from '../../../api/quant';
 import type { QuantDataset, QuantRun } from '../../../api/quant';
 import { ErrorNotice } from '../../../components/ErrorNotice';
@@ -17,20 +19,15 @@ import styles from './index.less';
 
 export function QuantWorkspace() {
   const client = useQueryClient();
-  const datasets = useQuery({ queryKey: ['quant-datasets'], queryFn: quantApi.datasets });
-  const runs = useQuery({
-    queryKey: ['quant-runs'],
-    queryFn: quantApi.runs,
-    refetchInterval: (q) =>
-      q.state.data?.items.some((r) => ['queued', 'running'].includes(r.status)) ? 3000 : 300000,
-  });
-  const config = useQuery({ queryKey: ['config'], queryFn: api.config });
+  const datasets = useQuery(quantQueries.datasets());
+  const runs = useQuery(quantQueries.runs());
+  const config = useQuery(configQueries.current());
   const [selected, setSelected] = useState<string>('');
   const selection = selected || datasets.data?.items[0]?.id;
   const current = datasets.data?.items.find((d) => d.id === selection);
   const invalidate = async (data: QuantDataset) => {
     setSelected(data.id);
-    await client.invalidateQueries({ queryKey: ['quant-datasets'] });
+    await invalidateQuantDatasets(client);
   };
   const fromHistory = useMutation({ mutationFn: quantApi.history, onSuccess: invalidate });
   const fromDemo = useMutation({ mutationFn: quantApi.demo, onSuccess: invalidate });

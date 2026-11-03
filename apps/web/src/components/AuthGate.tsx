@@ -1,15 +1,16 @@
+import { authQueries } from '../features/auth/queries';
 import { useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Input } from 'antd';
-import { api } from '../api/client';
+import { authApi } from '../api/auth';
 import { ErrorNotice } from './ErrorNotice';
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [key, setKey] = useState('');
   const client = useQueryClient();
-  const auth = useQuery({ queryKey: ['auth'], queryFn: api.authStatus, staleTime: 0 });
+  const auth = useQuery({ ...authQueries.status(), staleTime: 0 });
   const login = useMutation({
-    mutationFn: api.login,
+    mutationFn: authApi.login,
     onSuccess: () => {
       setKey('');
       void client.invalidateQueries();

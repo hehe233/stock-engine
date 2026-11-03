@@ -2,7 +2,7 @@
 
 [返回文档总索引](README.md) · [架构索引](architecture/README.md) · [源码导航](architecture/source-map.md)
 
-评估日期：2026-11-03。本文记录结构评估、实施方案和进度；P0、P1 结构改造已完成并通过对应验证，后续按 P2–P3 分阶段推进。项目定位以 [AGENTS.md](../AGENTS.md) 和 [项目 README](../README.md) 为准：单用户、单机的 A 股研究与 Agent 学习项目，当前处于 P3 研究验证阶段。
+评估日期：2026-11-03。本文记录结构评估、实施方案和进度；P0、P1 已完成；P2 请求、契约、进程与产物改造已实施，验证结果见实施状态和验证记录；P3 按条件推进。项目定位以 [AGENTS.md](../AGENTS.md) 和 [项目 README](../README.md) 为准：单用户、单机的 A 股研究与 Agent 学习项目，当前处于 P3 研究验证阶段。
 
 前端组织方式按用户明确要求修订：参考 `E:/BRDKurin/project/code/a2a-frontend`，页面、可视业务模块和独立组件采用「语义目录 + `index.tsx` + `index.less`」。保留 CSS Modules 的局部作用域，样式语言迁到 Less；P0 已接入 Less/CSS Modules 并将 ErrorNotice 迁为目录组件；P1 已迁移 Quant/QuantRun/Research/History 及其领域模块；其余页面以后续功能改动为单位渐进迁移。
 
@@ -14,7 +14,7 @@
 | ------ | ------------------------------------------------------------- | --------------------------------------------- |
 | P0     | Less/CSS Modules 构建基础；公共请求、时间、证券及采集依赖拆分 | 已完成；验证见[记录](history/verification.md) |
 | P1     | Quant 工作台/详情、研究共享表格；后端业务路由与冻结证据归属   | 已完成；验证见[记录](history/verification.md) |
-| P2     | HTTP/查询缓存、响应契约、worker 进程监督与量化产物读取        | 待实施                                        |
+| P2     | HTTP/查询缓存、响应契约、worker 进程监督与量化产物读取        | 已实施，验证见[记录](history/verification.md) |
 | P3     | 按实际需求拆 ORM、生成类型与迁移持久数据目录                  | 条件实施                                      |
 
 P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 index.less；后端 http/dependencies.py、shared/time.py、shared/securities.py、providers/base.py、providers/runner.py、providers/normalization.py。调用方和测试已经切换公共导入；表结构、API 路径与任务执行语义不变。
@@ -33,12 +33,32 @@ P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 ind
 
 本批没有迁移数据库、checkpoint 或量化产物目录，没有调整研究/概率口径。根 schemas.py 暂保留现有共享响应契约，worker 监督与 quant/data.py 的产物拆分留在 P2；Dashboard、Portfolio、ModelSettings 和 Agent 展示组件尚未批量改目录。
 
-### 接下来 P2 的顺序与理由
+### P1 完成时确定的 P2 顺序与理由
 
 1. **先整理 HTTP、领域请求和查询缓存。** 从 api/client.ts 独立 request，再按领域集中 query key 与失效规则；保留 cookie、超时、SSE 和既有 key 形状。原因：P1 已把模块拆开，跨页面刷新规则仍分散，容易出现操作成功而其他视图仍显示旧值。
 2. **核对响应契约与缺失语义。** 在实际 API 消费点补齐 schema 和前端类型；先维护明确契约，再决定是否值得自动生成类型。原因：重构后调用路径更清楚，但时间、来源和 unknown/null 的含义仍需跨端一致。
 3. **抽取 worker 进程监督。** 先覆盖退出、超时、取消与回收，再合并重复运行管理。原因：这部分直接影响故障恢复，不能只把相似代码搬到基类。
 4. **独立量化产物接口。** 集中路径、哈希核验和分页读取，保留当前文件布局。原因：训练、下载与查询应共用完整性规则，避免各自解释产物细节。
+
+### P2 本批改造与原因
+
+| 已实施改造                                                                                 | 为什么这样优化                                                                                                  |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `api/http.ts` 统一传输，各领域 API 独立；持仓请求与类型移出 research                       | 基础传输不再依赖全部业务；按功能修改接口时只需定位本领域文件                                                    |
+| `features/<领域>/queries.ts` 集中查询与失效；终态刷新任务/报告，量化取消刷新详情/列表      | 防止操作成功后其他视图继续显示旧数据；保留既有 key、cookie、超时和流式订阅语义                                  |
+| research/portfolio/quant 声明响应模型，补齐前端分页、时间、参数、审计和产物类型            | 明确必填、null 与省略的区别；Decimal 成本保持字符串，版本扩展字段可追溯；后续才有可靠的类型生成基础             |
+| `runtime/processes.py` 负责进程机制，AgentSlot/QuantSlot 分别管理状态；采集调度独立        | 复用启动、kill/wait 和超时处理，同时保留 Agent 租约/checkpoint 与量化中断失败的差异；启动异常不再直接终止主循环 |
+| `quant/datasets.py` 管输入，`artifacts.py` 管路径/流式哈希/分页/写入清理，service 协调发布 | 下载和查询遵循同一完整性规则；避免半成品对外成功、失败清理误删已引用版本，保持原文件布局                        |
+| 新增进程故障、响应、产物失败和缓存测试；跨端共用 SSE 样例                                  | 验证行为与恢复边界，而不仅检查文件搬迁后能否导入；重复回放、重试草稿和最终报告可共同回归                        |
+
+本批未调整数据库表结构、HTTP URL、快照/任务标识、checkpoint 或持久数据目录。新建可视模块继续使用 `index.tsx + index.less`；本批增加的 `queries.ts`、请求和契约是纯逻辑文件，不创建空的可视入口。完整验证及未覆盖范围见[验证记录](history/verification.md)。
+
+### 接下来如何优化：P3 按条件启动
+
+1. **先按实际改动迁移剩余页面组件。** Dashboard、Portfolio、ModelSettings 和 Agent 展示组件在功能变化时拆成目录内 `index.tsx + index.less`；先选修改频繁且职责集中的一块。原因：逐块验证交互与样式，避免把纯文件搬迁变成大范围回归。
+2. **跨端契约频繁漂移时，再引入 OpenAPI 类型生成。** 先把当前显式响应模型作为权威来源，再建立生成命令与差异检查；仍保留业务语义测试。原因：自动生成能减少手写重复，但不能自动保证未知值、来源时间或冻结证据正确。
+3. **db.py 出现维护冲突或独立迁移需求时，再按领域拆 ORM。** 同批维护统一 metadata 注册和旧库迁移回归。原因：当前单机模型尚可导航，单纯缩短文件不能抵消注册遗漏与迁移风险。
+4. **持久化运维需求明确后，再迁移数据目录。** 先演练业务库、checkpoint、产物的完整备份/恢复及回滚，再移动目录；孤儿文件回收单独设计引用核验。原因：代码回退不能还原数据，目录整理不应隐式删除研究证据。
 
 以下原始问题与现状段落保留评估时上下文；链接已指向迁移后的归属，当前入口以本节与源码导航为准。
 
@@ -87,7 +107,7 @@ P0 具体入口：前端 build/component-less.ts、ErrorNotice/index.tsx 和 ind
 
 ### 3.1 A / P0：独立公共依赖（已实施）
 
-**现状。** 除 `SessionDep` 放在 `routes.py` 外，[research_schemas.py](../apps/api/app/research/schemas.py)、[quant/data.py](../apps/api/app/quant/data.py) 等还从 [providers/public.py](../apps/api/app/providers/public.py) 导入 `SHANGHAI`、`normalize_symbol`；研究 provider 从该文件导入 `ProviderError`、`run_collector`。一个具体行情适配文件同时承载了通用规则和子进程执行。
+**现状。** 除 `SessionDep` 放在 `routes.py` 外，[research_schemas.py](../apps/api/app/research/schemas.py)、[原 quant/data.py，现 datasets.py](../apps/api/app/quant/datasets.py) 等还从 [providers/public.py](../apps/api/app/providers/public.py) 导入 `SHANGHAI`、`normalize_symbol`；研究 provider 从该文件导入 `ProviderError`、`run_collector`。一个具体行情适配文件同时承载了通用规则和子进程执行。
 
 **方案。**
 
@@ -170,7 +190,7 @@ P0 已在 [package.json](../apps/web/package.json) 声明 Less，并在 [vite.co
 
 ### 3.5 B：分开 HTTP 传输、领域请求与查询缓存约定
 
-**现状。** [api/client.ts](../apps/web/src/api/client.ts) 混合基础 request 和多个领域方法，research/quant 又依赖它。query key 和失效操作分布在页面及 [useJobStream.ts](../apps/web/src/components/agent/useJobStream.ts) 中。已有合理的统一请求与缓存体系，无需替换。
+**现状。** [原 api/client.ts，现 http.ts](../apps/web/src/api/http.ts) 混合基础 request 和多个领域方法，research/quant 又依赖它。query key 和失效操作分布在页面及 [useJobStream.ts](../apps/web/src/components/agent/useJobStream.ts) 中。已有合理的统一请求与缓存体系，无需替换。
 
 **方案。**
 
@@ -200,7 +220,7 @@ P0 已在 [package.json](../apps/web/package.json) 声明 Less，并在 [vite.co
 
 ### 3.7 B：量化文件读写形成明确接口，保持纯计算模块稳定
 
-**现状。** [quant/data.py](../apps/api/app/quant/data.py) 兼有解析、校验、审计、文件路径、版本保存和历史转换；[quant/routes.py](../apps/api/app/quant/routes.py) 内还实现产物校验、读取全部文件计算哈希和 DuckDB 分页。[quant/service.py](../apps/api/app/quant/service.py) 已有任务协调，features/engine/backtest 的计算划分可继续使用。
+**现状。** [原 quant/data.py，现 datasets.py](../apps/api/app/quant/datasets.py) 兼有解析、校验、审计、文件路径、版本保存和历史转换；[quant/routes.py](../apps/api/app/quant/routes.py) 内还实现产物校验、读取全部文件计算哈希和 DuckDB 分页。[quant/service.py](../apps/api/app/quant/service.py) 已有任务协调，features/engine/backtest 的计算划分可继续使用。
 
 **方案。** 将输入解析/校验聚合为 `quant/datasets.py`，历史转换保留明确来源接口；将固定产物路径、哈希验证、文件读取和预测分页收拢至 `quant/artifacts.py`，路由使用它的结果返回响应。文件版本保存与元数据提交的失败清理要有明确约定：只清理本次未完成的写入，不删除已引用版本。必要时细分，但不因文件数量追求统一模板。
 
